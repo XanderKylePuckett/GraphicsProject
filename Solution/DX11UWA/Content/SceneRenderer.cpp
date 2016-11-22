@@ -321,8 +321,8 @@ void SceneRenderer::ObjMesh_Unload(
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
 	// Load shaders asynchronously.
-	auto loadVSTask = DX::ReadDataAsync( L"SampleVertexShader.cso" );
-	auto loadPSTask = DX::ReadDataAsync( L"SamplePixelShader.cso" );
+	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
+	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
 	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fileData[ 0 ], fileData.size(), nullptr, &m_vertexShader ) );
