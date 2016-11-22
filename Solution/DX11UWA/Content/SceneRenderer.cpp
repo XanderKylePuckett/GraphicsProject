@@ -216,12 +216,12 @@ void SceneRenderer::Render( void )
 
 	// Prepare the constant buffer to send it to the graphics device.
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0 );
-	// Each vertex is one instance of the VertexPositionUVNormal struct.
-	UINT stride = sizeof( VertexPositionUVNormal );
+	// Each vertex is one instance of the Vertex struct.
+	UINT stride = sizeof( Vertex );
 	UINT offset = 0;
 	context->IASetVertexBuffers( 0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset );
-	// Each index is one 16-bit unsigned integer (short).
-	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0 );
+	// Each index is one 32-bit unsigned integer.
+	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0 );
 	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	context->IASetInputLayout( m_inputLayout.Get() );
 	// Attach our vertex shader.
@@ -253,8 +253,8 @@ void SceneRenderer::ObjMesh_CountLines(
 
 void SceneRenderer::ObjMesh_LoadMesh(
 	const char* const filepath,
-	VertexPositionUVNormal*& outVertices,
-	unsigned short*& outIndices,
+	Vertex*& outVertices,
+	unsigned int*& outIndices,
 	unsigned int& outNumVertices,
 	unsigned int& outNumIndices )
 {
@@ -268,7 +268,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		file.close();
 	}
 #pragma region CUBE
-	static const VertexPositionUVNormal tempVertices[ ] =
+	static const Vertex tempVertices[ ] =
 	{
 		{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
 		{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
@@ -279,38 +279,38 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
 		{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
 	};
-	static const unsigned short tempIndices[ ] =
+	static const unsigned int tempIndices[ ] =
 	{
-		0ui16, 1ui16, 2ui16,
-		1ui16, 3ui16, 2ui16,
+		0u, 1u, 2u,
+		1u, 3u, 2u,
 
-		4ui16, 6ui16, 5ui16,
-		5ui16, 6ui16, 7ui16,
+		4u, 6u, 5u,
+		5u, 6u, 7u,
 
-		0ui16, 5ui16, 1ui16,
-		0ui16, 4ui16, 5ui16,
+		0u, 5u, 1u,
+		0u, 4u, 5u,
 
-		2ui16, 7ui16, 6ui16,
-		2ui16, 3ui16, 7ui16,
+		2u, 7u, 6u,
+		2u, 3u, 7u,
 
-		0ui16, 6ui16, 4ui16,
-		0ui16, 2ui16, 6ui16,
+		0u, 6u, 4u,
+		0u, 2u, 6u,
 
-		1ui16, 7ui16, 3ui16,
-		1ui16, 5ui16, 7ui16
+		1u, 7u, 3u,
+		1u, 5u, 7u
 	};
 	outNumVertices = 8u;
 	outNumIndices = 36u;
-	outVertices = new VertexPositionUVNormal[ outNumVertices ];
-	outIndices = new unsigned short[ outNumIndices ];
-	memcpy_s( outVertices, sizeof( VertexPositionUVNormal ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
-	memcpy_s( outIndices, sizeof( unsigned short ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
+	outVertices = new Vertex[ outNumVertices ];
+	outIndices = new unsigned int[ outNumIndices ];
+	memcpy_s( outVertices, sizeof( Vertex ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
+	memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
 #pragma endregion
 }
 
 void SceneRenderer::ObjMesh_Unload(
-	VertexPositionUVNormal*& vertices,
-	unsigned short*& indices )
+	Vertex*& vertices,
+	unsigned int*& indices )
 {
 	delete[ ] vertices;
 	delete[ ] indices;
@@ -345,8 +345,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createMeshTask = ( createVSTask && createPSTask ).then( [ this ]()
 	{
-		VertexPositionUVNormal* vertices = nullptr;
-		unsigned short* indices = nullptr;
+		Vertex* vertices = nullptr;
+		unsigned int* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
 		ObjMesh_LoadMesh( "Assets\\Mesh.mobj", vertices, indices, numVertices, numIndices );
@@ -354,7 +354,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
 		vertexBufferData.pSysMem = vertices;
-		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( VertexPositionUVNormal ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
 
 		m_indexCount = numIndices;
@@ -362,7 +362,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		D3D11_SUBRESOURCE_DATA indexBufferData;
 		ZEROSTRUCT( indexBufferData );
 		indexBufferData.pSysMem = indices;
-		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned short ) * numIndices, D3D11_BIND_INDEX_BUFFER );
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
 
 		ObjMesh_Unload( vertices, indices );

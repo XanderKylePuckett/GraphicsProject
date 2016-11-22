@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "SampleFpsTextRenderer.h"
 
-#include "Common/DirectXHelper.h"
+#include "Common\\DirectXHelper.h"
 
 using namespace DX11UWA;
 using namespace Microsoft::WRL;

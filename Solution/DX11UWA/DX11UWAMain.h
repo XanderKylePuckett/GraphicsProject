@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "Common\StepTimer.h"
-#include "Common\DeviceResources.h"
-#include "Content\SceneRenderer.h"
-#include "Content\SampleFpsTextRenderer.h"
+#include "Common\\StepTimer.h"
+#include "Common\\DeviceResources.h"
+#include "Content\\SceneRenderer.h"
+#include "Content\\SampleFpsTextRenderer.h"
 
 // Renders Direct2D and 3D content on the screen.
 namespace DX11UWA

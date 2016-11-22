@@ -10,7 +10,7 @@ namespace DX11UWA
 		DirectX::XMFLOAT4X4 projection;
 	};
 
-	struct VertexPositionUVNormal
+	struct Vertex
 	{
 		DirectX::XMFLOAT4 pos;
 		DirectX::XMFLOAT4 uv;

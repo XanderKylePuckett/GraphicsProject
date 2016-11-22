@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "pch.h"
-#include "Common\DeviceResources.h"
+#include "Common\\DeviceResources.h"
 #include "DX11UWAMain.h"
 
 namespace DX11UWA

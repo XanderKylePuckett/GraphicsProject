@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "DX11UWAMain.h"
-#include "Common\DirectXHelper.h"
+#include "Common\\DirectXHelper.h"
 
 using namespace DX11UWA;
 using namespace Windows::Foundation;

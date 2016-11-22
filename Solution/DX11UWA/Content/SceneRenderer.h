@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "..\Common\DeviceResources.h"
+#include "..\\Common\\DeviceResources.h"
 #include "ShaderStructures.h"
-#include "..\Common\StepTimer.h"
+#include "..\\Common\\StepTimer.h"
 
 
 namespace DX11UWA
@@ -31,9 +31,9 @@ namespace DX11UWA
 	private:
 		void Rotate( float radians );
 		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
-		static void ObjMesh_LoadMesh( const char* const, VertexPositionUVNormal*&, unsigned short*&, unsigned int&, unsigned int& );
+		static void ObjMesh_LoadMesh( const char* const, Vertex*&, unsigned int*&, unsigned int&, unsigned int& );
 		static void ObjMesh_CountLines( const char* const, unsigned int&, unsigned int&, unsigned int&, unsigned int& );
-		static void ObjMesh_Unload( VertexPositionUVNormal*&, unsigned short*& );
+		static void ObjMesh_Unload( Vertex*&, unsigned int*& );
 
 	private:
 		// Cached pointer to device resources.
@@ -65,4 +65,3 @@ namespace DX11UWA
 		DirectX::XMFLOAT4X4 m_camera;
 	};
 }
-
