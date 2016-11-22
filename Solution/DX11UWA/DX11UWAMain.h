@@ -3,7 +3,7 @@
 #include "Common\\StepTimer.h"
 #include "Common\\DeviceResources.h"
 #include "Content\\SceneRenderer.h"
-#include "Content\\SampleFpsTextRenderer.h"
+#include "Content\\FpsTextRenderer.h"
 
 // Renders Direct2D and 3D content on the screen.
 namespace DX11UWA
@@ -31,7 +31,7 @@ namespace DX11UWA
 
 		// TODO: Replace with your own content renderers.
 		std::unique_ptr<SceneRenderer> m_sceneRenderer;
-		std::unique_ptr<SampleFpsTextRenderer> m_fpsTextRenderer;
+		std::unique_ptr<FpsTextRenderer> m_fpsTextRenderer;
 
 		// Rendering loop timer.
 		DX::StepTimer m_timer;
