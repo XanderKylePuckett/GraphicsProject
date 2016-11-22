@@ -1,12 +1,8 @@
 ﻿#include "pch.h"
 #include "Sample3DSceneRenderer.h"
-
-#include "..\Common\DirectXHelper.h"
-
+#include "..\\Common\\DirectXHelper.h"
+#include <fstream>
 using namespace DX11UWA;
-
-using namespace DirectX;
-using namespace Windows::Foundation;
 
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 Sample3DSceneRenderer::Sample3DSceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
@@ -19,7 +15,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer( const std::shared_ptr<DX::DeviceRe
 	memset( m_kbuttons, 0, sizeof( m_kbuttons ) );
 	m_currMousePos = nullptr;
 	m_prevMousePos = nullptr;
-	memset( &m_camera, 0, sizeof( XMFLOAT4X4 ) );
+	memset( &m_camera, 0, sizeof( DirectX::XMFLOAT4X4 ) );
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -28,9 +24,9 @@ Sample3DSceneRenderer::Sample3DSceneRenderer( const std::shared_ptr<DX::DeviceRe
 // Initializes view parameters when the window size changes.
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources( void )
 {
-	Size outputSize = m_deviceResources->GetOutputSize();
+	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
-	float fovAngleY = 70.0f * XM_PI / 180.0f;
+	float fovAngleY = 70.0f * DirectX::XM_PI / 180.0f;
 
 	// This is a simple example of change that can be made when the app is in
 	// portrait or snapped view.
@@ -46,18 +42,18 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources( void )
 	// this transform should not be applied.
 
 	// This sample makes use of a right-handed coordinate system using row-major matrices.
-	XMMATRIX perspectiveMatrix = XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
+	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
 
-	XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
+	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
 
-	XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
+	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
 
 	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
-	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
-	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
+	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
+	static const DirectX::XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
 	XMStoreFloat4x4( &m_camera, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
@@ -69,9 +65,9 @@ void Sample3DSceneRenderer::Update( DX::StepTimer const& timer )
 	if ( !m_tracking )
 	{
 		// Convert degrees to radians, then convert seconds to rotation angle
-		float radiansPerSecond = XMConvertToRadians( m_degreesPerSecond );
+		float radiansPerSecond = DirectX::XMConvertToRadians( m_degreesPerSecond );
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
-		float radians = static_cast< float >( fmod( totalRotation, XM_2PI ) );
+		float radians = static_cast< float >( fmod( totalRotation, DirectX::XM_2PI ) );
 
 		Rotate( radians );
 	}
@@ -86,7 +82,7 @@ void Sample3DSceneRenderer::Update( DX::StepTimer const& timer )
 void Sample3DSceneRenderer::Rotate( float radians )
 {
 	// Prepare to pass the updated model matrix to the shader
-	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( XMMatrixRotationY( radians ) ) );
+	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( DirectX::XMMatrixRotationY( radians ) ) );
 }
 
 void Sample3DSceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd )
@@ -95,44 +91,44 @@ void Sample3DSceneRenderer::UpdateCamera( DX::StepTimer const& timer, float cons
 
 	if ( m_kbuttons[ 'W' ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( 0.0f, 0.0f, moveSpd * delta_time );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, 0.0f, moveSpd * delta_time );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 	if ( m_kbuttons[ 'S' ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( 0.0f, 0.0f, -moveSpd * delta_time );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, 0.0f, -moveSpd * delta_time );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 	if ( m_kbuttons[ 'A' ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( -moveSpd * delta_time, 0.0f, 0.0f );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( -moveSpd * delta_time, 0.0f, 0.0f );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 	if ( m_kbuttons[ 'D' ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( moveSpd * delta_time, 0.0f, 0.0f );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( moveSpd * delta_time, 0.0f, 0.0f );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 	if ( m_kbuttons[ 'X' ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( 0.0f, -moveSpd * delta_time, 0.0f );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, -moveSpd * delta_time, 0.0f );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 	if ( m_kbuttons[ VK_SPACE ] )
 	{
-		XMMATRIX translation = XMMatrixTranslation( 0.0f, moveSpd * delta_time, 0.0f );
-		XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
+		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, moveSpd * delta_time, 0.0f );
+		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
 
@@ -143,16 +139,16 @@ void Sample3DSceneRenderer::UpdateCamera( DX::StepTimer const& timer, float cons
 			float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
 			float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
 
-			XMFLOAT4 pos = XMFLOAT4( m_camera._41, m_camera._42, m_camera._43, m_camera._44 );
+			DirectX::XMFLOAT4 pos( m_camera._41, m_camera._42, m_camera._43, m_camera._44 );
 
-			m_camera._41 = 0;
-			m_camera._42 = 0;
-			m_camera._43 = 0;
+			m_camera._41 = 0.0f;
+			m_camera._42 = 0.0f;
+			m_camera._43 = 0.0f;
 
-			XMMATRIX rotX = XMMatrixRotationX( dy * rotSpd * delta_time );
-			XMMATRIX rotY = XMMatrixRotationY( dx * rotSpd * delta_time );
+			DirectX::XMMATRIX rotX = DirectX::XMMatrixRotationX( dy * rotSpd * delta_time );
+			DirectX::XMMATRIX rotY = DirectX::XMMatrixRotationY( dx * rotSpd * delta_time );
 
-			XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
+			DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
 			temp_camera = XMMatrixMultiply( rotX, temp_camera );
 			temp_camera = XMMatrixMultiply( temp_camera, rotY );
 
@@ -194,7 +190,7 @@ void Sample3DSceneRenderer::TrackingUpdate( float positionX )
 {
 	if ( m_tracking )
 	{
-		float radians = XM_2PI * 2.0f * positionX / m_deviceResources->GetOutputSize().Width;
+		float radians = DirectX::XM_2PI * 2.0f * positionX / m_deviceResources->GetOutputSize().Width;
 		Rotate( radians );
 	}
 }
@@ -238,13 +234,95 @@ void Sample3DSceneRenderer::Render( void )
 	context->DrawIndexed( m_indexCount, 0, 0 );
 }
 
+void Sample3DSceneRenderer::ObjMesh_CountLines(
+	const char* const filepath,
+	unsigned int& positions,
+	unsigned int& uvs,
+	unsigned int& normals,
+	unsigned int& faces
+)
+{
+	std::ifstream file;
+	file.open( filepath, std::ios_base::in );
+	if ( file.is_open() )
+	{
+
+		file.close();
+	}
+}
+
+void Sample3DSceneRenderer::ObjMesh_LoadMesh(
+	const char* const filepath,
+	VertexPositionColor*& outVertices,
+	unsigned short*& outIndices,
+	unsigned int& outNumVertices,
+	unsigned int& outNumIndices )
+{
+	unsigned int numPositions = 0u, numUVs = 0u, numNormals = 0u, numFaces = 0u;
+	ObjMesh_CountLines( filepath, numPositions, numUVs, numNormals, numFaces );
+	std::ifstream file;
+	file.open( filepath, std::ios_base::in );
+	if ( file.is_open() )
+	{
+
+		file.close();
+	}
+#pragma region temporary
+	static const VertexPositionColor tempVertices[ ] =
+	{
+		{ DirectX::XMFLOAT3( -0.5f, -0.5f, -0.5f ), DirectX::XMFLOAT3( 0.0f, 0.0f, 0.0f ) },
+		{ DirectX::XMFLOAT3( -0.5f, -0.5f, 0.5f ), DirectX::XMFLOAT3( 0.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT3( -0.5f, 0.5f, -0.5f ), DirectX::XMFLOAT3( 0.0f, 1.0f, 0.0f ) },
+		{ DirectX::XMFLOAT3( -0.5f, 0.5f, 0.5f ), DirectX::XMFLOAT3( 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT3( 0.5f, -0.5f, -0.5f ), DirectX::XMFLOAT3( 1.0f, 0.0f, 0.0f ) },
+		{ DirectX::XMFLOAT3( 0.5f, -0.5f, 0.5f ), DirectX::XMFLOAT3( 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT3( 0.5f, 0.5f, -0.5f ), DirectX::XMFLOAT3( 1.0f, 1.0f, 0.0f ) },
+		{ DirectX::XMFLOAT3( 0.5f, 0.5f, 0.5f ), DirectX::XMFLOAT3( 1.0f, 1.0f, 1.0f ) },
+	};
+	static const unsigned short tempIndices[ ] =
+	{
+		0ui16, 1ui16, 2ui16,
+		1ui16, 3ui16, 2ui16,
+
+		4ui16, 6ui16, 5ui16,
+		5ui16, 6ui16, 7ui16,
+
+		0ui16, 5ui16, 1ui16,
+		0ui16, 4ui16, 5ui16,
+
+		2ui16, 7ui16, 6ui16,
+		2ui16, 3ui16, 7ui16,
+
+		0ui16, 6ui16, 4ui16,
+		0ui16, 2ui16, 6ui16,
+
+		1ui16, 7ui16, 3ui16,
+		1ui16, 5ui16, 7ui16
+	};
+	outNumVertices = 8u;
+	outNumIndices = 36u;
+	outVertices = new VertexPositionColor[ outNumVertices ];
+	outIndices = new unsigned short[ outNumIndices ];
+	memcpy_s( outVertices, sizeof( VertexPositionColor ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
+	memcpy_s( outIndices, sizeof( unsigned short ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
+#pragma endregion
+}
+
+void Sample3DSceneRenderer::ObjMesh_Unload(
+	VertexPositionColor*& vertices,
+	unsigned short*& indices )
+{
+	delete[ ] vertices;
+	delete[ ] indices;
+	vertices = nullptr;
+	indices = nullptr;
+}
+
 void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 {
 	// Load shaders asynchronously.
 	auto loadVSTask = DX::ReadDataAsync( L"SampleVertexShader.cso" );
 	auto loadPSTask = DX::ReadDataAsync( L"SamplePixelShader.cso" );
-
-	// After the vertex shader file is loaded, create the shader and input layout.
 	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fileData[ 0 ], fileData.size(), nullptr, &m_vertexShader ) );
@@ -257,8 +335,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
 	} );
-
-	// After the pixel shader file is loaded, create the shader and constant buffer.
 	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
@@ -266,71 +342,31 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-
-	// Once both shaders are loaded, create the mesh.
-	auto createCubeTask = ( createPSTask && createVSTask ).then( [ this ]()
+	auto createMeshTask = ( createVSTask && createPSTask ).then( [ this ]()
 	{
-		// Load mesh vertices. Each vertex has a position and a color.
-		static const VertexPositionColor cubeVertices[ ] =
-		{
-			{XMFLOAT3( -0.5f, -0.5f, -0.5f ), XMFLOAT3( 0.0f, 0.0f, 0.0f )},
-			{XMFLOAT3( -0.5f, -0.5f,  0.5f ), XMFLOAT3( 0.0f, 0.0f, 1.0f )},
-			{XMFLOAT3( -0.5f,  0.5f, -0.5f ), XMFLOAT3( 0.0f, 1.0f, 0.0f )},
-			{XMFLOAT3( -0.5f,  0.5f,  0.5f ), XMFLOAT3( 0.0f, 1.0f, 1.0f )},
-			{XMFLOAT3( 0.5f, -0.5f, -0.5f ), XMFLOAT3( 1.0f, 0.0f, 0.0f )},
-			{XMFLOAT3( 0.5f, -0.5f,  0.5f ), XMFLOAT3( 1.0f, 0.0f, 1.0f )},
-			{XMFLOAT3( 0.5f,  0.5f, -0.5f ), XMFLOAT3( 1.0f, 1.0f, 0.0f )},
-			{XMFLOAT3( 0.5f,  0.5f,  0.5f ), XMFLOAT3( 1.0f, 1.0f, 1.0f )},
-		};
+		VertexPositionColor* vertices = nullptr;
+		unsigned short* indices = nullptr;
+		unsigned int numVertices = 0u, numIndices = 0u;
 
-		D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-		vertexBufferData.pSysMem = cubeVertices;
-		vertexBufferData.SysMemPitch = 0;
-		vertexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( cubeVertices ), D3D11_BIND_VERTEX_BUFFER );
+		ObjMesh_LoadMesh( "Assets\\Mesh.mobj", vertices, indices, numVertices, numIndices );
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		vertexBufferData.pSysMem = vertices;
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( VertexPositionColor ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
 
-		// Load mesh indices. Each trio of indices represents
-		// a triangle to be rendered on the screen.
-		// For example: 0,2,1 means that the vertices with indexes
-		// 0, 2 and 1 from the vertex buffer compose the 
-		// first triangle of this mesh.
-		static const unsigned short cubeIndices[ ] =
-		{
-			0,1,2, // -x
-			1,3,2,
+		m_indexCount = numIndices;
 
-			4,6,5, // +x
-			5,6,7,
-
-			0,5,1, // -y
-			0,4,5,
-
-			2,7,6, // +y
-			2,3,7,
-
-			0,6,4, // -z
-			0,2,6,
-
-			1,7,3, // +z
-			1,5,7,
-		};
-
-		m_indexCount = ARRAYSIZE( cubeIndices );
-
-		D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-		indexBufferData.pSysMem = cubeIndices;
-		indexBufferData.SysMemPitch = 0;
-		indexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( cubeIndices ), D3D11_BIND_INDEX_BUFFER );
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( indexBufferData );
+		indexBufferData.pSysMem = indices;
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned short ) * numIndices, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
-	} );
 
-	// Once the cube is loaded, the object is ready to be rendered.
-	createCubeTask.then( [ this ]()
-	{
-		m_loadingComplete = true;
+		ObjMesh_Unload( vertices, indices );
 	} );
+	createMeshTask.then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources( void )

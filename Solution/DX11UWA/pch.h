@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include <wrl.h>
 #include <wrl/client.h>
 #include <dxgi1_4.h>
@@ -13,3 +12,4 @@
 #include <memory>
 #include <agile.h>
 #include <concrt.h>
+#define ZEROSTRUCT(X) ZeroMemory((&(X)),(sizeof((X))))

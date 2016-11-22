@@ -31,6 +31,9 @@ namespace DX11UWA
 	private:
 		void Rotate( float radians );
 		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
+		static void ObjMesh_LoadMesh( const char* const, VertexPositionColor*&, unsigned short*&, unsigned int&, unsigned int& );
+		static void ObjMesh_CountLines( const char* const, unsigned int&, unsigned int&, unsigned int&, unsigned int& );
+		static void ObjMesh_Unload( VertexPositionColor*&, unsigned short*& );
 
 	private:
 		// Cached pointer to device resources.
