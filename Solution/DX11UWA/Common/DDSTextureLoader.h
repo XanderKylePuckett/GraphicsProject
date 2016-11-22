@@ -36,16 +36,16 @@
 #endif
 
 HRESULT CreateDDSTextureFromMemory( _In_ ID3D11Device* d3dDevice,
-                                    _In_reads_bytes_(ddsDataSize) const uint8_t* ddsData,
-                                    _In_ size_t ddsDataSize,
-                                    _Out_opt_ ID3D11Resource** texture,
-                                    _Out_opt_ ID3D11ShaderResourceView** textureView,
-                                    _In_ size_t maxsize = 0
-                                  );
+									_In_reads_bytes_( ddsDataSize ) const uint8_t* ddsData,
+									_In_ size_t ddsDataSize,
+									_Out_opt_ ID3D11Resource** texture,
+									_Out_opt_ ID3D11ShaderResourceView** textureView,
+									_In_ size_t maxsize = 0
+);
 
 HRESULT CreateDDSTextureFromFile( _In_ ID3D11Device* d3dDevice,
-                                  _In_z_ const wchar_t* szFileName,
-                                  _Out_opt_ ID3D11Resource** texture,
-                                  _Out_opt_ ID3D11ShaderResourceView** textureView,
-                                  _In_ size_t maxsize = 0
-                                );
+								  _In_z_ const wchar_t* szFileName,
+								  _Out_opt_ ID3D11Resource** texture,
+								  _Out_opt_ ID3D11ShaderResourceView** textureView,
+								  _In_ size_t maxsize = 0
+);

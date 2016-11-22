@@ -11,19 +11,19 @@ namespace DX11UWA
 	class DX11UWAMain : public DX::IDeviceNotify
 	{
 	public:
-		DX11UWAMain(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		~DX11UWAMain(void);
-		void CreateWindowSizeDependentResources(void);
-		void Update(void);
-		bool Render(void);
+		DX11UWAMain( const std::shared_ptr<DX::DeviceResources>& deviceResources );
+		~DX11UWAMain( void );
+		void CreateWindowSizeDependentResources( void );
+		void Update( void );
+		bool Render( void );
 
 		// IDeviceNotify
-		virtual void OnDeviceLost(void);
-		virtual void OnDeviceRestored(void);
-		
+		virtual void OnDeviceLost( void );
+		virtual void OnDeviceRestored( void );
+
 		// Helper functions for the keyboard and mouse input
-		void GetKeyboardButtons(const char* buttons);
-		void GetMousePos(const Windows::UI::Input::PointerPoint^ pos);
+		void GetKeyboardButtons( const char* buttons );
+		void GetMousePos( const Windows::UI::Input::PointerPoint^ pos );
 
 	private:
 		// Cached pointer to device resources.
@@ -37,7 +37,7 @@ namespace DX11UWA
 		DX::StepTimer m_timer;
 
 		// Data members for the keyboard and mouse input
-		char main_kbuttons[256];
+		char main_kbuttons[ 256 ];
 		Windows::UI::Input::PointerPoint^ main_currentpos;
 	};
 }

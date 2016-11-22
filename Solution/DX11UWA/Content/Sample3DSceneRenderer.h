@@ -11,26 +11,26 @@ namespace DX11UWA
 	class Sample3DSceneRenderer
 	{
 	public:
-		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		void CreateDeviceDependentResources(void);
-		void CreateWindowSizeDependentResources(void);
-		void ReleaseDeviceDependentResources(void);
-		void Update(DX::StepTimer const& timer);
-		void Render(void);
-		void StartTracking(void);
-		void TrackingUpdate(float positionX);
-		void StopTracking(void);
-		inline bool IsTracking(void) { return m_tracking; }
+		Sample3DSceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources );
+		void CreateDeviceDependentResources( void );
+		void CreateWindowSizeDependentResources( void );
+		void ReleaseDeviceDependentResources( void );
+		void Update( DX::StepTimer const& timer );
+		void Render( void );
+		void StartTracking( void );
+		void TrackingUpdate( float positionX );
+		void StopTracking( void );
+		inline bool IsTracking( void ) { return m_tracking; }
 
 		// Helper functions for keyboard and mouse input
-		void SetKeyboardButtons(const char* list);
-		void SetMousePosition(const Windows::UI::Input::PointerPoint^ pos);
-		void SetInputDeviceData(const char* kb, const Windows::UI::Input::PointerPoint^ pos);
+		void SetKeyboardButtons( const char* list );
+		void SetMousePosition( const Windows::UI::Input::PointerPoint^ pos );
+		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
 
 
 	private:
-		void Rotate(float radians);
-		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
+		void Rotate( float radians );
+		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
 
 	private:
 		// Cached pointer to device resources.
@@ -54,7 +54,7 @@ namespace DX11UWA
 		bool	m_tracking;
 
 		// Data members for keyboard and mouse input
-		char	m_kbuttons[256];
+		char	m_kbuttons[ 256 ];
 		Windows::UI::Input::PointerPoint^ m_currMousePos;
 		Windows::UI::Input::PointerPoint^ m_prevMousePos;
 

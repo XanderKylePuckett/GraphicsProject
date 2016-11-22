@@ -7,15 +7,15 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="54014835-9bba-472b-bf12-b7d15c2fdce2"
-    Publisher="CN=Dan"
+    Name="bb32586f-5d81-4f46-b6f1-3c9ca4807618"
+    Publisher="CN=tonyboyangie3"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="54014835-9bba-472b-bf12-b7d15c2fdce2" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="bb32586f-5d81-4f46-b6f1-3c9ca4807618" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>DX11UWA</DisplayName>
-    <PublisherDisplayName>Dan</PublisherDisplayName>
+    <PublisherDisplayName>tonyboyangie3</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

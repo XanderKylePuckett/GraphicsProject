@@ -10,10 +10,10 @@ namespace DX11UWA
 	class SampleFpsTextRenderer
 	{
 	public:
-		SampleFpsTextRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
+		SampleFpsTextRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources );
 		void CreateDeviceDependentResources();
 		void ReleaseDeviceDependentResources();
-		void Update(DX::StepTimer const& timer);
+		void Update( DX::StepTimer const& timer );
 		void Render();
 
 	private:

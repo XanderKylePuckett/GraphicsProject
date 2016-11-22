@@ -17,10 +17,10 @@ using namespace Windows::Graphics::Display;
 
 // The main function is only used to initialize our IFrameworkView class.
 [Platform::MTAThread]
-int main(Platform::Array<Platform::String^>^)
+int main( Platform::Array<Platform::String^>^ )
 {
 	auto direct3DApplicationSource = ref new Direct3DApplicationSource();
-	CoreApplication::Run(direct3DApplicationSource);
+	CoreApplication::Run( direct3DApplicationSource );
 	return 0;
 }
 
@@ -29,27 +29,27 @@ IFrameworkView^ Direct3DApplicationSource::CreateView()
 	return ref new App();
 }
 
-App::App(void) :
-	m_windowClosed(false),
-	m_windowVisible(true)
+App::App( void ) :
+	m_windowClosed( false ),
+	m_windowVisible( true )
 {
-	memset(kb_buttons, 0, sizeof(kb_buttons));
+	memset( kb_buttons, 0, sizeof( kb_buttons ) );
 	current_mpos = nullptr;
 }
 
 // The first method called when the IFrameworkView is being created.
-void App::Initialize(CoreApplicationView^ applicationView)
+void App::Initialize( CoreApplicationView^ applicationView )
 {
 	// Register event handlers for app lifecycle. This example includes Activated, so that we
 	// can make the CoreWindow active and start rendering on the window.
 	applicationView->Activated +=
-		ref new TypedEventHandler<CoreApplicationView^, IActivatedEventArgs^>(this, &App::OnActivated);
+		ref new TypedEventHandler<CoreApplicationView^, IActivatedEventArgs^>( this, &App::OnActivated );
 
 	CoreApplication::Suspending +=
-		ref new EventHandler<SuspendingEventArgs^>(this, &App::OnSuspending);
+		ref new EventHandler<SuspendingEventArgs^>( this, &App::OnSuspending );
 
 	CoreApplication::Resuming +=
-		ref new EventHandler<Platform::Object^>(this, &App::OnResuming);
+		ref new EventHandler<Platform::Object^>( this, &App::OnResuming );
 
 	// At this point we have access to the device. 
 	// We can create the device-dependent resources.
@@ -57,80 +57,80 @@ void App::Initialize(CoreApplicationView^ applicationView)
 }
 
 // Called when the CoreWindow object is created (or re-created).
-void App::SetWindow(CoreWindow^ window)
+void App::SetWindow( CoreWindow^ window )
 {
-	window->SizeChanged += 
-		ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>(this, &App::OnWindowSizeChanged);
+	window->SizeChanged +=
+		ref new TypedEventHandler<CoreWindow^, WindowSizeChangedEventArgs^>( this, &App::OnWindowSizeChanged );
 
 	window->VisibilityChanged +=
-		ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>(this, &App::OnVisibilityChanged);
+		ref new TypedEventHandler<CoreWindow^, VisibilityChangedEventArgs^>( this, &App::OnVisibilityChanged );
 
-	window->Closed += 
-		ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>(this, &App::OnWindowClosed);
+	window->Closed +=
+		ref new TypedEventHandler<CoreWindow^, CoreWindowEventArgs^>( this, &App::OnWindowClosed );
 
 	DisplayInformation^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
 
 	currentDisplayInformation->DpiChanged +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDpiChanged);
+		ref new TypedEventHandler<DisplayInformation^, Object^>( this, &App::OnDpiChanged );
 
 	currentDisplayInformation->OrientationChanged +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnOrientationChanged);
+		ref new TypedEventHandler<DisplayInformation^, Object^>( this, &App::OnOrientationChanged );
 
 	DisplayInformation::DisplayContentsInvalidated +=
-		ref new TypedEventHandler<DisplayInformation^, Object^>(this, &App::OnDisplayContentsInvalidated);
+		ref new TypedEventHandler<DisplayInformation^, Object^>( this, &App::OnDisplayContentsInvalidated );
 
 	window->KeyDown +=
-		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnButtonDown);
+		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>( this, &App::OnButtonDown );
 
 	window->KeyUp +=
-		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnButtonUp);
+		ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>( this, &App::OnButtonUp );
 
 	window->PointerPressed +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseButtonDown);
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseButtonDown );
 
 	window->PointerReleased +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseButtonUp);
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseButtonUp );
 
 	window->PointerMoved +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseMove);
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseMove );
 
 	window->PointerExited +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnMouseExit);
+		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseExit );
 
 
-	m_deviceResources->SetWindow(window);
+	m_deviceResources->SetWindow( window );
 }
 
 // Initializes scene resources, or loads a previously saved app state.
-void App::Load(Platform::String^ entryPoint)
+void App::Load( Platform::String^ entryPoint )
 {
-	if (m_main == nullptr)
+	if ( m_main == nullptr )
 	{
-		m_main = std::unique_ptr<DX11UWAMain>(new DX11UWAMain(m_deviceResources));
+		m_main = std::unique_ptr<DX11UWAMain>( new DX11UWAMain( m_deviceResources ) );
 	}
 }
 
 // This method is called after the window becomes active.
-void App::Run(void)
+void App::Run( void )
 {
-	while (!m_windowClosed)
+	while ( !m_windowClosed )
 	{
-		if (m_windowVisible)
+		if ( m_windowVisible )
 		{
-			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents( CoreProcessEventsOption::ProcessAllIfPresent );
 
-			m_main->GetKeyboardButtons(SendKeyboardButtons());
-			m_main->GetMousePos(SendMousePos());
+			m_main->GetKeyboardButtons( SendKeyboardButtons() );
+			m_main->GetMousePos( SendMousePos() );
 			m_main->Update();
 
-			if (m_main->Render())
+			if ( m_main->Render() )
 			{
 				m_deviceResources->Present();
 			}
 		}
 		else
 		{
-			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+			CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents( CoreProcessEventsOption::ProcessOneAndAllPending );
 		}
 	}
 }
@@ -138,19 +138,19 @@ void App::Run(void)
 // Required for IFrameworkView.
 // Terminate events do not cause Uninitialize to be called. It will be called if your IFrameworkView
 // class is torn down while the app is in the foreground.
-void App::Uninitialize(void)
+void App::Uninitialize( void )
 {
 }
 
 // Application lifecycle event handlers.
 
-void App::OnActivated(CoreApplicationView^ applicationView, IActivatedEventArgs^ args)
+void App::OnActivated( CoreApplicationView^ applicationView, IActivatedEventArgs^ args )
 {
 	// Run() won't start until the CoreWindow is activated.
 	CoreWindow::GetForCurrentThread()->Activate();
 }
 
-void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
+void App::OnSuspending( Platform::Object^ sender, SuspendingEventArgs^ args )
 {
 	// Save app state asynchronously after requesting a deferral. Holding a deferral
 	// indicates that the application is busy performing suspending operations. Be
@@ -158,17 +158,17 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 	// the app will be forced to exit.
 	SuspendingDeferral^ deferral = args->SuspendingOperation->GetDeferral();
 
-	create_task([this, deferral]()
+	create_task( [ this, deferral ]()
 	{
-        m_deviceResources->Trim();
+		m_deviceResources->Trim();
 
 		// Insert your code here.
 
 		deferral->Complete();
-	});
+	} );
 }
 
-void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
+void App::OnResuming( Platform::Object^ sender, Platform::Object^ args )
 {
 	// Restore any data or state that was unloaded on suspend. By default, data
 	// and state are persisted when resuming from suspend. Note that this event
@@ -179,81 +179,81 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 // Window event handlers.
 
-void App::OnWindowSizeChanged(CoreWindow^ sender, WindowSizeChangedEventArgs^ args)
+void App::OnWindowSizeChanged( CoreWindow^ sender, WindowSizeChangedEventArgs^ args )
 {
-	m_deviceResources->SetLogicalSize(Size(sender->Bounds.Width, sender->Bounds.Height));
+	m_deviceResources->SetLogicalSize( Size( sender->Bounds.Width, sender->Bounds.Height ) );
 	m_main->CreateWindowSizeDependentResources();
 }
 
-void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
+void App::OnVisibilityChanged( CoreWindow^ sender, VisibilityChangedEventArgs^ args )
 {
 	m_windowVisible = args->Visible;
 }
 
-void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
+void App::OnWindowClosed( CoreWindow^ sender, CoreWindowEventArgs^ args )
 {
 	m_windowClosed = true;
 }
 
 // DisplayInformation event handlers.
 
-void App::OnDpiChanged(DisplayInformation^ sender, Object^ args)
+void App::OnDpiChanged( DisplayInformation^ sender, Object^ args )
 {
 	// Note: The value for LogicalDpi retrieved here may not match the effective DPI of the app
 	// if it is being scaled for high resolution devices. Once the DPI is set on DeviceResources,
 	// you should always retrieve it using the GetDpi method.
 	// See DeviceResources.cpp for more details.
-	m_deviceResources->SetDpi(sender->LogicalDpi);
+	m_deviceResources->SetDpi( sender->LogicalDpi );
 	m_main->CreateWindowSizeDependentResources();
 }
 
-void App::OnOrientationChanged(DisplayInformation^ sender, Object^ args)
+void App::OnOrientationChanged( DisplayInformation^ sender, Object^ args )
 {
-	m_deviceResources->SetCurrentOrientation(sender->CurrentOrientation);
+	m_deviceResources->SetCurrentOrientation( sender->CurrentOrientation );
 	m_main->CreateWindowSizeDependentResources();
 }
 
-void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
+void App::OnDisplayContentsInvalidated( DisplayInformation^ sender, Object^ args )
 {
 	m_deviceResources->ValidateDevice();
 }
 
-void App::OnButtonUp(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args)
+void App::OnButtonUp( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args )
 {
-	kb_buttons[(UINT)args->VirtualKey] = false;
+	kb_buttons[ ( UINT )args->VirtualKey ] = false;
 }
 
-void App::OnButtonDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args)
+void App::OnButtonDown( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args )
 {
-	kb_buttons[(UINT)args->VirtualKey] = true;
+	kb_buttons[ ( UINT )args->VirtualKey ] = true;
 }
 
-void App::OnMouseButtonDown(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
-{
-	current_mpos = args->CurrentPoint;
-}
-
-void App::OnMouseButtonUp(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+void App::OnMouseButtonDown( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args )
 {
 	current_mpos = args->CurrentPoint;
 }
 
-void App::OnMouseMove(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+void App::OnMouseButtonUp( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args )
 {
 	current_mpos = args->CurrentPoint;
 }
 
-void App::OnMouseExit(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args)
+void App::OnMouseMove( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args )
+{
+	current_mpos = args->CurrentPoint;
+}
+
+void App::OnMouseExit( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args )
 {
 	//throw ref new Platform::NotImplementedException();
 }
 
-char* App::SendKeyboardButtons(void)
+char* App::SendKeyboardButtons( void )
 {
 	return kb_buttons;
 }
 
-Windows::UI::Input::PointerPoint^ App::SendMousePos(void)
+Windows::UI::Input::PointerPoint^ App::SendMousePos( void )
 {
 	//throw ref new Platform::NotImplementedException();
 	// TODO: insert return statement here
