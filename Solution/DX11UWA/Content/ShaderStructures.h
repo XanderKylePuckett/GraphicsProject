@@ -10,17 +10,10 @@ namespace DX11UWA
 		DirectX::XMFLOAT4X4 projection;
 	};
 
-	// Used to send per-vertex data to the vertex shader.
-	struct VertexPositionColor
-	{
-		DirectX::XMFLOAT3 pos;
-		DirectX::XMFLOAT3 color;
-	};
-
 	struct VertexPositionUVNormal
 	{
-		DirectX::XMFLOAT3 pos;
-		DirectX::XMFLOAT3 uv;
-		DirectX::XMFLOAT3 normal;
+		DirectX::XMFLOAT4 pos;
+		DirectX::XMFLOAT4 uv;
+		DirectX::XMFLOAT4 normal;
 	};
 }

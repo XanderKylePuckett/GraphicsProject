@@ -216,8 +216,8 @@ void Sample3DSceneRenderer::Render( void )
 
 	// Prepare the constant buffer to send it to the graphics device.
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0 );
-	// Each vertex is one instance of the VertexPositionColor struct.
-	UINT stride = sizeof( VertexPositionColor );
+	// Each vertex is one instance of the VertexPositionUVNormal struct.
+	UINT stride = sizeof( VertexPositionUVNormal );
 	UINT offset = 0;
 	context->IASetVertexBuffers( 0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset );
 	// Each index is one 16-bit unsigned integer (short).
@@ -253,7 +253,7 @@ void Sample3DSceneRenderer::ObjMesh_CountLines(
 
 void Sample3DSceneRenderer::ObjMesh_LoadMesh(
 	const char* const filepath,
-	VertexPositionColor*& outVertices,
+	VertexPositionUVNormal*& outVertices,
 	unsigned short*& outIndices,
 	unsigned int& outNumVertices,
 	unsigned int& outNumIndices )
@@ -267,17 +267,17 @@ void Sample3DSceneRenderer::ObjMesh_LoadMesh(
 
 		file.close();
 	}
-#pragma region temporary
-	static const VertexPositionColor tempVertices[ ] =
+#pragma region CUBE
+	static const VertexPositionUVNormal tempVertices[ ] =
 	{
-		{ DirectX::XMFLOAT3( -0.5f, -0.5f, -0.5f ), DirectX::XMFLOAT3( 0.0f, 0.0f, 0.0f ) },
-		{ DirectX::XMFLOAT3( -0.5f, -0.5f, 0.5f ), DirectX::XMFLOAT3( 0.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT3( -0.5f, 0.5f, -0.5f ), DirectX::XMFLOAT3( 0.0f, 1.0f, 0.0f ) },
-		{ DirectX::XMFLOAT3( -0.5f, 0.5f, 0.5f ), DirectX::XMFLOAT3( 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT3( 0.5f, -0.5f, -0.5f ), DirectX::XMFLOAT3( 1.0f, 0.0f, 0.0f ) },
-		{ DirectX::XMFLOAT3( 0.5f, -0.5f, 0.5f ), DirectX::XMFLOAT3( 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT3( 0.5f, 0.5f, -0.5f ), DirectX::XMFLOAT3( 1.0f, 1.0f, 0.0f ) },
-		{ DirectX::XMFLOAT3( 0.5f, 0.5f, 0.5f ), DirectX::XMFLOAT3( 1.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
 	};
 	static const unsigned short tempIndices[ ] =
 	{
@@ -301,15 +301,15 @@ void Sample3DSceneRenderer::ObjMesh_LoadMesh(
 	};
 	outNumVertices = 8u;
 	outNumIndices = 36u;
-	outVertices = new VertexPositionColor[ outNumVertices ];
+	outVertices = new VertexPositionUVNormal[ outNumVertices ];
 	outIndices = new unsigned short[ outNumIndices ];
-	memcpy_s( outVertices, sizeof( VertexPositionColor ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
+	memcpy_s( outVertices, sizeof( VertexPositionUVNormal ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
 	memcpy_s( outIndices, sizeof( unsigned short ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
 #pragma endregion
 }
 
 void Sample3DSceneRenderer::ObjMesh_Unload(
-	VertexPositionColor*& vertices,
+	VertexPositionUVNormal*& vertices,
 	unsigned short*& indices )
 {
 	delete[ ] vertices;
@@ -329,8 +329,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[ ] =
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "UV", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
@@ -344,7 +345,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createMeshTask = ( createVSTask && createPSTask ).then( [ this ]()
 	{
-		VertexPositionColor* vertices = nullptr;
+		VertexPositionUVNormal* vertices = nullptr;
 		unsigned short* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
@@ -353,7 +354,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources( void )
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
 		vertexBufferData.pSysMem = vertices;
-		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( VertexPositionColor ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( VertexPositionUVNormal ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
 
 		m_indexCount = numIndices;
