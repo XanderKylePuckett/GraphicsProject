@@ -83,9 +83,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DX11UWA_TemporaryKey.pfx" />
-    <None Include="Assets\Mesh.mobj">
-      <Filter>Assets</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\VertexShader.hlsl">
@@ -94,5 +91,10 @@
     <FxCompile Include="Content\PixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="Assets\Mesh.mobj">
+      <Filter>Assets</Filter>
+    </Media>
   </ItemGroup>
 </Project>

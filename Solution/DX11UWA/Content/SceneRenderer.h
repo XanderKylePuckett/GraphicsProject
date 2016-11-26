@@ -3,7 +3,7 @@
 #include "..\\Common\\DeviceResources.h"
 #include "ShaderStructures.h"
 #include "..\\Common\\StepTimer.h"
-
+#include <vector>
 
 namespace DX11UWA
 {
@@ -29,10 +29,18 @@ namespace DX11UWA
 
 
 	private:
+		struct IndexTriangle
+		{
+			unsigned int p[ 3 ];
+			unsigned int t[ 3 ];
+			unsigned int n[ 3 ];
+		};
 		void Rotate( float radians );
 		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
+		static void ObjMesh_ToBuffer( Vertex*&, unsigned int*&, unsigned int&, unsigned int&,
+									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<DirectX::XMFLOAT2>&,
+									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<IndexTriangle>& );
 		static void ObjMesh_LoadMesh( const char* const, Vertex*&, unsigned int*&, unsigned int&, unsigned int& );
-		static void ObjMesh_CountLines( const char* const, unsigned int&, unsigned int&, unsigned int&, unsigned int& );
 		static void ObjMesh_Unload( Vertex*&, unsigned int*& );
 
 	private:

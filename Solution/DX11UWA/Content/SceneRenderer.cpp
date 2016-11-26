@@ -204,10 +204,7 @@ void SceneRenderer::StopTracking( void )
 void SceneRenderer::Render( void )
 {
 	// Loading is asynchronous. Only draw geometry after it's loaded.
-	if ( !m_loadingComplete )
-	{
-		return;
-	}
+	if ( !m_loadingComplete ) return;
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
@@ -218,39 +215,76 @@ void SceneRenderer::Render( void )
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0 );
 	// Each vertex is one instance of the Vertex struct.
 	UINT stride = sizeof( Vertex );
-	UINT offset = 0;
-	context->IASetVertexBuffers( 0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset );
+	UINT offset = 0u;
+	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer.GetAddressOf(), &stride, &offset );
 	// Each index is one 32-bit unsigned integer.
-	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0 );
+	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	context->IASetInputLayout( m_inputLayout.Get() );
 	// Attach our vertex shader.
-	context->VSSetShader( m_vertexShader.Get(), nullptr, 0 );
+	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
 	// Send the constant buffer to the graphics device.
-	context->VSSetConstantBuffers1( 0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
+	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
 	// Attach our pixel shader.
-	context->PSSetShader( m_pixelShader.Get(), nullptr, 0 );
+	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
 	// Draw the objects.
-	context->DrawIndexed( m_indexCount, 0, 0 );
+	context->DrawIndexed( m_indexCount, 0u, 0 );
 }
 
-void SceneRenderer::ObjMesh_CountLines(
-	const char* const filepath,
-	unsigned int& positions,
-	unsigned int& uvs,
-	unsigned int& normals,
-	unsigned int& faces
-)
+bool operator==( const Vertex& lhs, const Vertex& rhs )
 {
-	std::ifstream file;
-	file.open( filepath, std::ios_base::in );
-	if ( file.is_open() )
-	{
-
-		file.close();
-	}
+	return
+		lhs.pos.x == rhs.pos.x &&
+		lhs.pos.y == rhs.pos.y &&
+		lhs.pos.z == rhs.pos.z &&
+		lhs.uv.x == rhs.uv.x &&
+		lhs.uv.y == rhs.uv.y &&
+		lhs.normal.x == rhs.normal.x &&
+		lhs.normal.y == rhs.normal.y &&
+		lhs.normal.z == rhs.normal.z;
 }
-
+void SceneRenderer::ObjMesh_ToBuffer( Vertex*& outVertices, unsigned int*& outIndices,
+									  unsigned int& outNumVertices, unsigned int& outNumIndices,
+									  const std::vector<DirectX::XMFLOAT3>& positions,
+									  const std::vector<DirectX::XMFLOAT2>& uvs,
+									  const std::vector<DirectX::XMFLOAT3>& normals,
+									  const std::vector<SceneRenderer::IndexTriangle>& triangles )
+{
+	std::vector<Vertex> vertices;
+	std::vector<unsigned int> indices;
+	Vertex tempVert =
+	{
+		DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ),
+		DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ),
+		DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f )
+	};
+	unsigned int i;
+	for ( const IndexTriangle& triangle : triangles ) for ( int v = 0; v < 3; ++v )
+	{
+		tempVert.pos.x = positions[ triangle.p[ v ] - 1u ].x;
+		tempVert.pos.y = positions[ triangle.p[ v ] - 1u ].y;
+		tempVert.pos.z = positions[ triangle.p[ v ] - 1u ].z;
+		tempVert.uv.x = uvs[ triangle.t[ v ] - 1u ].x;
+		tempVert.uv.y = uvs[ triangle.t[ v ] - 1u ].y;
+		tempVert.normal.x = normals[ triangle.n[ v ] - 1u ].x;
+		tempVert.normal.y = normals[ triangle.n[ v ] - 1u ].y;
+		tempVert.normal.z = normals[ triangle.n[ v ] - 1u ].z;
+		for ( i = 0u; i < vertices.size(); ++i )
+			if ( vertices[ i ] == tempVert )
+				break;
+		if ( i == vertices.size() )
+			vertices.push_back( tempVert );
+		indices.push_back( i );
+	}
+	outNumVertices = ( unsigned int )vertices.size();
+	outNumIndices = ( unsigned int )indices.size();
+	outVertices = new Vertex[ outNumVertices ];
+	outIndices = new unsigned int[ outNumIndices ];
+	for ( i = 0u; i < outNumVertices; ++i )
+		outVertices[ i ] = vertices[ i ];
+	for ( i = 0u; i < outNumIndices; ++i )
+		outIndices[ i ] = indices[ i ];
+}
 void SceneRenderer::ObjMesh_LoadMesh(
 	const char* const filepath,
 	Vertex*& outVertices,
@@ -258,14 +292,62 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	unsigned int& outNumVertices,
 	unsigned int& outNumIndices )
 {
-	unsigned int numPositions = 0u, numUVs = 0u, numNormals = 0u, numFaces = 0u;
-	ObjMesh_CountLines( filepath, numPositions, numUVs, numNormals, numFaces );
 	std::ifstream file;
 	file.open( filepath, std::ios_base::in );
 	if ( file.is_open() )
 	{
-
+		DirectX::XMFLOAT2 tempf2( 0.0f, 0.0f );
+		DirectX::XMFLOAT3 tempf3( 0.0f, 0.0f, 0.0f );
+		IndexTriangle tempTriangle;
+		ZEROSTRUCT( tempTriangle );
+		std::vector<DirectX::XMFLOAT3> positions;
+		std::vector<DirectX::XMFLOAT2> uvs;
+		std::vector<DirectX::XMFLOAT3> normals;
+		std::vector<IndexTriangle> triangles;
+		char temp;
+		for ( ;; )
+		{
+			file.get( temp );
+			if ( file.eof() )
+				break;
+			if ( 'v' == temp )
+			{
+				file.get( temp );
+				if ( ' ' == temp )
+				{
+					file >> tempf3.x >> tempf3.y >> tempf3.z;
+					positions.push_back( tempf3 );
+				}
+				else if ( 't' == temp )
+				{
+					file >> tempf2.x >> tempf2.y;
+					uvs.push_back( tempf2 );
+				}
+				else if ( 'n' == temp )
+				{
+					file >> tempf3.x >> tempf3.y >> tempf3.z;
+					normals.push_back( tempf3 );
+				}
+			}
+			else if ( 'f' == temp )
+			{
+				file.get( temp );
+				if ( ' ' == temp )
+				{
+					file >> tempTriangle.p[ 0 ] >> temp >> tempTriangle.t[ 0 ] >> temp >> tempTriangle.n[ 0 ];
+					file >> tempTriangle.p[ 1 ] >> temp >> tempTriangle.t[ 1 ] >> temp >> tempTriangle.n[ 1 ];
+					file >> tempTriangle.p[ 2 ] >> temp >> tempTriangle.t[ 2 ] >> temp >> tempTriangle.n[ 2 ];
+					triangles.push_back( tempTriangle );
+				}
+			}
+			while ( '\n' != temp )
+				file.get( temp );
+		}
 		file.close();
+		ObjMesh_ToBuffer( outVertices, outIndices,
+						  outNumVertices, outNumIndices,
+						  positions, uvs, normals, triangles );
+		return;
 	}
 #pragma region CUBE
 	static const Vertex tempVertices[ ] =
@@ -307,7 +389,6 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
 #pragma endregion
 }
-
 void SceneRenderer::ObjMesh_Unload(
 	Vertex*& vertices,
 	unsigned int*& indices )
