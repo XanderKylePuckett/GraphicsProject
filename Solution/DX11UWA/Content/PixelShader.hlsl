@@ -1,4 +1,6 @@
-// Per-pixel color data passed through the pixel shader.
+texture2D tex : register( t0 );
+SamplerState samplerstate : register( s0 );
+
 struct PixelShaderInput
 {
 	float4 pos : SV_POSITION;
@@ -6,8 +8,8 @@ struct PixelShaderInput
 	float4 normal : NORMAL;
 };
 
-// A pass-through function for the (interpolated) color data.
 float4 main( PixelShaderInput input ) : SV_TARGET
 {
-	return float4( input.texcoord );
+	float2 uv = float2( input.texcoord.x, input.texcoord.y );
+	return tex.Sample( samplerstate, uv );
 }

@@ -335,6 +335,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 				else if ( 't' == temp )
 				{
 					file >> tempf2.x >> tempf2.y;
+					tempf2.y = 1.0f - tempf2.y;
 					uvs.push_back( tempf2 );
 				}
 				else if ( 'n' == temp )
@@ -411,6 +412,13 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 	indices = nullptr;
 }
 
+unsigned int getColor( const unsigned int& inCol )
+{
+	return
+		( ( ( inCol & 0xff000000u ) >> 24 ) | ( ( inCol & 0xff0000u ) >> 8 ) |
+		( ( inCol & 0xff00u ) << 8 ) | ( ( inCol & 0xffu ) << 24 ) );
+}
+
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
 	// Load shaders asynchronously.
@@ -476,14 +484,18 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0u;
 		textureDesc.MiscFlags = 0u;
+		unsigned int* pixels = new unsigned int[ Talon_numpixels ];
+		for ( unsigned int i = 0u; i < Talon_numpixels; ++i )
+			pixels[ i ] = getColor( Talon_pixels[ i ] );
 		for ( unsigned int i = 0u; i < Talon_numlevels; ++i )
 		{
 			ZEROSTRUCT( textureSubresourceData[ i ] );
-			textureSubresourceData[ i ].pSysMem = &Talon_pixels[ Talon_leveloffsets[ i ] ];
+			textureSubresourceData[ i ].pSysMem = &pixels[ Talon_leveloffsets[ i ] ];
 			textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
 		}
 		ID3D11Texture2D* texture;
 		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+		delete[ ] pixels;
 
 		D3D11_SAMPLER_DESC samplerDesc;
 		ZEROSTRUCT( samplerDesc );
@@ -502,6 +514,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		samplerDesc.MaxLOD = FLT_MAX;
 		ID3D11SamplerState* samplerState;
 		m_deviceResources->GetD3DDevice()->CreateSamplerState( &samplerDesc, &samplerState );
+
+		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		ZEROSTRUCT( srvDesc );
