@@ -72,15 +72,15 @@
     <ClInclude Include="Content\FpsTextRenderer.h">
       <Filter>Content</Filter>
     </ClInclude>
-    <ClInclude Include="Assets\Talon.h">
-      <Filter>Assets</Filter>
-    </ClInclude>
     <ClInclude Include="Assets\star.h">
       <Filter>Assets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Talon.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>

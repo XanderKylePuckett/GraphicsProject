@@ -2,7 +2,6 @@
 #include "SceneRenderer.h"
 #include "..\\Common\\DirectXHelper.h"
 #include "..\\Common\\DDSTextureLoader.h"
-#include "Assets\\Talon.h"
 #include "Assets\\star.h"
 #include <fstream>
 using namespace DX11UWA;
@@ -389,13 +388,6 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 	indices = nullptr;
 }
 
-unsigned int getColor( const unsigned int& inCol )
-{
-	return
-		( ( ( inCol & 0xff000000u ) >> 24 ) | ( ( inCol & 0xff0000u ) >> 8 ) |
-		( ( inCol & 0xff00u ) << 8 ) | ( ( inCol & 0xffu ) << 24 ) );
-}
-
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
 	// Load shaders asynchronously.
@@ -447,60 +439,67 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createTextureTask = createPSTask.then( [ this ]()
 	{
+		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
 		ID3D11Texture2D* texture;
-		D3D11_SUBRESOURCE_DATA* textureSubresourceData = nullptr;
-		D3D11_TEXTURE2D_DESC textureDesc;
-		ZEROSTRUCT( textureDesc );
-		textureDesc.ArraySize = 1u;
-		textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-		textureDesc.SampleDesc.Count = 1u;
-		textureDesc.SampleDesc.Quality = 0u;
-		textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0u;
-		textureDesc.MiscFlags = 0u;
-		unsigned int* pixels = nullptr;
+		ID3D11ShaderResourceView* srv;
+		ID3D11SamplerState* samplerState;
+		D3D11_SAMPLER_DESC samplerDesc;
+		ZEROSTRUCT( samplerDesc );
+
 		if ( renderCube )
 		{
-			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ star_numlevels ];
+			D3D11_SUBRESOURCE_DATA textureSubresourceData[ star_numlevels ];
+			D3D11_TEXTURE2D_DESC textureDesc;
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+			ZEROSTRUCT( textureDesc );
+			ZEROSTRUCT( srvDesc );
+			unsigned int* pixels = new unsigned int[ star_numpixels ];
+			unsigned int i = 0u;
+
+			textureDesc.ArraySize = 1u;
+			textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+			textureDesc.SampleDesc.Count = 1u;
+			textureDesc.SampleDesc.Quality = 0u;
+			textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+			textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+			textureDesc.CPUAccessFlags = 0u;
+			textureDesc.MiscFlags = 0u;
 			textureDesc.Width = star_width;
 			textureDesc.Height = star_height;
 			textureDesc.MipLevels = star_numlevels;
-			pixels = new unsigned int[ star_numpixels ];
-			unsigned int i = 0u;
 			for ( ; i < star_numpixels; ++i )
-				pixels[ i ] = getColor( star_pixels[ i ] );
+			{
+				const unsigned int& x = star_pixels[ i ];
+				pixels[ i ] =
+					( ( x & 0xff000000u ) >> 24 ) |
+					( ( x & 0x00ff0000u ) >> 8 ) |
+					( ( x & 0x0000ff00u ) << 8 ) |
+					( ( x & 0x000000ffu ) << 24 );
+			}
 			for ( i = 0u; i < star_numlevels; ++i )
 			{
 				ZEROSTRUCT( textureSubresourceData[ i ] );
 				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
 				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
 			}
+			dev->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+			delete[ ] pixels;
+			srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MostDetailedMip = 0u;
+			srvDesc.Texture2D.MipLevels = star_numlevels;
+			dev->CreateShaderResourceView( texture, &srvDesc, &srv );
+			m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
+			srv->Release();
+			texture->Release();
 		}
-		else
+		else if ( S_OK == CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &texture ), &srv ) )
 		{
-			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ Talon_numlevels ];
-			textureDesc.Width = Talon_width;
-			textureDesc.Height = Talon_height;
-			textureDesc.MipLevels = Talon_numlevels;
-			pixels = new unsigned int[ Talon_numpixels ];
-			unsigned int i = 0u;
-			for ( ; i < Talon_numpixels; ++i )
-				pixels[ i ] = getColor( Talon_pixels[ i ] );
-			for ( i = 0u; i < Talon_numlevels; ++i )
-			{
-				ZEROSTRUCT( textureSubresourceData[ i ] );
-				textureSubresourceData[ i ].pSysMem = &pixels[ Talon_leveloffsets[ i ] ];
-				textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
-			}
-			m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+			m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
+			srv->Release();
+			texture->Release();
 		}
-		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
-		delete[ ] pixels;
-		delete[ ] textureSubresourceData;
 
-		D3D11_SAMPLER_DESC samplerDesc;
-		ZEROSTRUCT( samplerDesc );
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -514,25 +513,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		samplerDesc.BorderColor[ 3 ] = 1.0f;
 		samplerDesc.MinLOD = -FLT_MAX;
 		samplerDesc.MaxLOD = FLT_MAX;
-		ID3D11SamplerState* samplerState;
-		m_deviceResources->GetD3DDevice()->CreateSamplerState( &samplerDesc, &samplerState );
-
+		dev->CreateSamplerState( &samplerDesc, &samplerState );
 		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		ZEROSTRUCT( srvDesc );
-		srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MostDetailedMip = 0u;
-		srvDesc.Texture2D.MipLevels = renderCube ? star_numlevels : Talon_numlevels;
-		ID3D11ShaderResourceView* srv;
-		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( texture, &srvDesc, &srv );
-
-		m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
-
-		srv->Release();
 		samplerState->Release();
-		texture->Release();
 	} );
 	( createMeshTask && createTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
 }
