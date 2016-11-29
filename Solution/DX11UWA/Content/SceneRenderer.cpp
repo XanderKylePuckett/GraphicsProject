@@ -441,7 +441,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		unsigned int* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
-		ObjMesh_LoadMesh( "Assets\\Blade.mobj", vertices, indices, numVertices, numIndices );
+		ObjMesh_LoadMesh( "Assets\\Talon.mobj", vertices, indices, numVertices, numIndices );
 
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
@@ -458,12 +458,6 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
 
 		ObjMesh_Unload( vertices, indices );
-
-		//ID3D11Resource* texture = nullptr;
-		//ID3D11ShaderResourceView* srv = nullptr;
-		//CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Mesh.jweiofj", &texture, &srv );
-		//texture->Release();
-		//srv->Release();
 	} );
 	createMeshTask.then( [ this ]() { m_loadingComplete = true; } );
 }
