@@ -1,8 +1,10 @@
 ﻿#include "pch.h"
 #include "SceneRenderer.h"
 #include "..\\Common\\DirectXHelper.h"
+#include "..\\Common\\DDSTextureLoader.h"
 #include <fstream>
 using namespace DX11UWA;
+bool SceneRenderer::renderFileMesh = true;
 
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
@@ -64,18 +66,28 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 {
 	if ( !m_tracking )
 	{
-		// Convert degrees to radians, then convert seconds to rotation angle
-		float radiansPerSecond = DirectX::XMConvertToRadians( m_degreesPerSecond );
-		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
-		float radians = static_cast< float >( fmod( totalRotation, DirectX::XM_2PI ) );
-
-		Rotate( radians );
+		Rotate( ( float )fmod(
+			timer.GetTotalSeconds() *
+			DirectX::XMConvertToRadians( m_degreesPerSecond ),
+			DirectX::XM_2PI ) );
 	}
 
 
 	// Update or move camera here
 	UpdateCamera( timer, 1.0f, 0.75f );
-
+	static bool rButtonDown = false;
+	if ( m_kbuttons[ 'R' ] )
+	{
+		if ( !rButtonDown )
+		{
+			rButtonDown = true;
+			ReleaseDeviceDependentResources();
+			renderFileMesh = !renderFileMesh;
+			CreateDeviceDependentResources();
+		}
+	}
+	else
+		rButtonDown = false;
 }
 
 // Rotate the 3D cube model a set amount of radians.
@@ -117,7 +129,7 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
 		XMStoreFloat4x4( &m_camera, result );
 	}
-	if ( m_kbuttons[ 'X' ] )
+	if ( m_kbuttons[ VK_SHIFT ] )
 	{
 		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, -moveSpd * delta_time, 0.0f );
 		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
@@ -293,7 +305,8 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	unsigned int& outNumIndices )
 {
 	std::ifstream file;
-	file.open( filepath, std::ios_base::in );
+	if ( renderFileMesh )
+		file.open( filepath, std::ios_base::in );
 	if ( file.is_open() )
 	{
 		DirectX::XMFLOAT2 tempf2( 0.0f, 0.0f );
@@ -347,51 +360,49 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		ObjMesh_ToBuffer( outVertices, outIndices,
 						  outNumVertices, outNumIndices,
 						  positions, uvs, normals, triangles );
-		return;
 	}
-#pragma region CUBE
-	static const Vertex tempVertices[ ] =
+	else
 	{
-		{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
-	};
-	static const unsigned int tempIndices[ ] =
-	{
-		0u, 1u, 2u,
-		1u, 3u, 2u,
+		static const Vertex tempVertices[ ] =
+		{
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
+		};
+		static const unsigned int tempIndices[ ] =
+		{
+			0u, 1u, 2u,
+			1u, 3u, 2u,
 
-		4u, 6u, 5u,
-		5u, 6u, 7u,
+			4u, 6u, 5u,
+			5u, 6u, 7u,
 
-		0u, 5u, 1u,
-		0u, 4u, 5u,
+			0u, 5u, 1u,
+			0u, 4u, 5u,
 
-		2u, 7u, 6u,
-		2u, 3u, 7u,
+			2u, 7u, 6u,
+			2u, 3u, 7u,
 
-		0u, 6u, 4u,
-		0u, 2u, 6u,
+			0u, 6u, 4u,
+			0u, 2u, 6u,
 
-		1u, 7u, 3u,
-		1u, 5u, 7u
-	};
-	outNumVertices = 8u;
-	outNumIndices = 36u;
-	outVertices = new Vertex[ outNumVertices ];
-	outIndices = new unsigned int[ outNumIndices ];
-	memcpy_s( outVertices, sizeof( Vertex ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
-	memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
-#pragma endregion
+			1u, 7u, 3u,
+			1u, 5u, 7u
+		};
+		outNumVertices = 8u;
+		outNumIndices = 36u;
+		outVertices = new Vertex[ outNumVertices ];
+		outIndices = new unsigned int[ outNumIndices ];
+		memcpy_s( outVertices, sizeof( Vertex ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
+		memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
+	}
 }
-void SceneRenderer::ObjMesh_Unload(
-	Vertex*& vertices,
-	unsigned int*& indices )
+void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 {
 	delete[ ] vertices;
 	delete[ ] indices;
@@ -447,6 +458,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
 
 		ObjMesh_Unload( vertices, indices );
+
+		//CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Mesh.png", nullptr, nullptr );
 	} );
 	createMeshTask.then( [ this ]() { m_loadingComplete = true; } );
 }

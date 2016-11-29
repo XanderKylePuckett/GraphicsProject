@@ -29,6 +29,7 @@ namespace DX11UWA
 
 
 	private:
+		static bool renderFileMesh;
 		struct IndexTriangle
 		{
 			unsigned int p[ 3 ];
