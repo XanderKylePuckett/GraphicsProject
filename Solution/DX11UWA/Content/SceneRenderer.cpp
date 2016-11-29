@@ -484,6 +484,38 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		}
 		ID3D11Texture2D* texture;
 		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+
+		D3D11_SAMPLER_DESC samplerDesc;
+		ZEROSTRUCT( samplerDesc );
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.MipLODBias = 0.0f;
+		samplerDesc.MaxAnisotropy = 1u;
+		samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		samplerDesc.BorderColor[ 0 ] = 1.0f;
+		samplerDesc.BorderColor[ 1 ] = 1.0f;
+		samplerDesc.BorderColor[ 2 ] = 1.0f;
+		samplerDesc.BorderColor[ 3 ] = 1.0f;
+		samplerDesc.MinLOD = -FLT_MAX;
+		samplerDesc.MaxLOD = FLT_MAX;
+		ID3D11SamplerState* samplerState;
+		m_deviceResources->GetD3DDevice()->CreateSamplerState( &samplerDesc, &samplerState );
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		ZEROSTRUCT( srvDesc );
+		srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0u;
+		srvDesc.Texture2D.MipLevels = Talon_numlevels;
+		ID3D11ShaderResourceView* srv;
+		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( texture, &srvDesc, &srv );
+
+		m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
+
+		srv->Release();
+		samplerState->Release();
 		texture->Release();
 	} );
 	( createMeshTask && createTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
