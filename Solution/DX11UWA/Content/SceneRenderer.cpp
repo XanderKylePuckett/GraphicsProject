@@ -3,6 +3,7 @@
 #include "..\\Common\\DirectXHelper.h"
 #include "..\\Common\\DDSTextureLoader.h"
 #include "Assets\\Talon.h"
+#include "Assets\\star.h"
 #include <fstream>
 using namespace DX11UWA;
 bool SceneRenderer::renderFileMesh = true;
@@ -367,14 +368,14 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	{
 		static const Vertex tempVertices[ ] =
 		{
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
 		};
 		static const unsigned int tempIndices[ ] =
 		{
@@ -470,12 +471,10 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createTextureTask = createPSTask.then( [ this ]()
 	{
+		ID3D11Texture2D* texture;
+		D3D11_SUBRESOURCE_DATA* textureSubresourceData = nullptr;
 		D3D11_TEXTURE2D_DESC textureDesc;
-		D3D11_SUBRESOURCE_DATA textureSubresourceData[ Talon_numlevels ];
 		ZEROSTRUCT( textureDesc );
-		textureDesc.Width = Talon_width;
-		textureDesc.Height = Talon_height;
-		textureDesc.MipLevels = Talon_numlevels;
 		textureDesc.ArraySize = 1u;
 		textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 		textureDesc.SampleDesc.Count = 1u;
@@ -484,18 +483,45 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0u;
 		textureDesc.MiscFlags = 0u;
-		unsigned int* pixels = new unsigned int[ Talon_numpixels ];
-		for ( unsigned int i = 0u; i < Talon_numpixels; ++i )
-			pixels[ i ] = getColor( Talon_pixels[ i ] );
-		for ( unsigned int i = 0u; i < Talon_numlevels; ++i )
+		unsigned int* pixels = nullptr;
+		if ( renderFileMesh )
 		{
-			ZEROSTRUCT( textureSubresourceData[ i ] );
-			textureSubresourceData[ i ].pSysMem = &pixels[ Talon_leveloffsets[ i ] ];
-			textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
+			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ Talon_numlevels ];
+			textureDesc.Width = Talon_width;
+			textureDesc.Height = Talon_height;
+			textureDesc.MipLevels = Talon_numlevels;
+			pixels = new unsigned int[ Talon_numpixels ];
+			unsigned int i = 0u;
+			for ( ; i < Talon_numpixels; ++i )
+				pixels[ i ] = getColor( Talon_pixels[ i ] );
+			for ( i = 0u; i < Talon_numlevels; ++i )
+			{
+				ZEROSTRUCT( textureSubresourceData[ i ] );
+				textureSubresourceData[ i ].pSysMem = &pixels[ Talon_leveloffsets[ i ] ];
+				textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
+			}
+			m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
 		}
-		ID3D11Texture2D* texture;
+		else
+		{
+			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ star_numlevels ];
+			textureDesc.Width = star_width;
+			textureDesc.Height = star_height;
+			textureDesc.MipLevels = star_numlevels;
+			pixels = new unsigned int[ star_numpixels ];
+			unsigned int i = 0u;
+			for ( ; i < star_numpixels; ++i )
+				pixels[ i ] = getColor( star_pixels[ i ] );
+			for ( i = 0u; i < star_numlevels; ++i )
+			{
+				ZEROSTRUCT( textureSubresourceData[ i ] );
+				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
+				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
+			}
+		}
 		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
 		delete[ ] pixels;
+		delete[ ] textureSubresourceData;
 
 		D3D11_SAMPLER_DESC samplerDesc;
 		ZEROSTRUCT( samplerDesc );
@@ -522,7 +548,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0u;
-		srvDesc.Texture2D.MipLevels = Talon_numlevels;
+		srvDesc.Texture2D.MipLevels = renderFileMesh ? Talon_numlevels : star_numlevels;
 		ID3D11ShaderResourceView* srv;
 		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( texture, &srvDesc, &srv );
 

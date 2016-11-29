@@ -75,6 +75,9 @@
     <ClInclude Include="Assets\Talon.h">
       <Filter>Assets</Filter>
     </ClInclude>
+    <ClInclude Include="Assets\star.h">
+      <Filter>Assets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
@@ -96,12 +99,6 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Media Include="Assets\Mesh.mobj">
-      <Filter>Assets</Filter>
-    </Media>
-    <Media Include="Assets\Blade.mobj">
-      <Filter>Assets</Filter>
-    </Media>
     <Media Include="Assets\Talon.mobj" />
   </ItemGroup>
 </Project>
