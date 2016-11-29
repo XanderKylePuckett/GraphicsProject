@@ -146,7 +146,7 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 
 	if ( m_currMousePos )
 	{
-		if ( m_currMousePos->Properties->IsRightButtonPressed && m_prevMousePos )
+		if ( m_currMousePos->Properties->IsLeftButtonPressed && m_prevMousePos )
 		{
 			float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
 			float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
@@ -224,7 +224,7 @@ void SceneRenderer::Render( void )
 
 
 	// Prepare the constant buffer to send it to the graphics device.
-	context->UpdateSubresource1( m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0 );
+	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
 	// Each vertex is one instance of the Vertex struct.
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
@@ -441,7 +441,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		unsigned int* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
-		ObjMesh_LoadMesh( "Assets\\Mesh.mobj", vertices, indices, numVertices, numIndices );
+		ObjMesh_LoadMesh( "Assets\\Blade.mobj", vertices, indices, numVertices, numIndices );
 
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
@@ -459,7 +459,11 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 
-		//CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Mesh.png", nullptr, nullptr );
+		//ID3D11Resource* texture = nullptr;
+		//ID3D11ShaderResourceView* srv = nullptr;
+		//CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Mesh.jweiofj", &texture, &srv );
+		//texture->Release();
+		//srv->Release();
 	} );
 	createMeshTask.then( [ this ]() { m_loadingComplete = true; } );
 }

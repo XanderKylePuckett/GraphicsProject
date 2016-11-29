@@ -94,9 +94,6 @@ void App::SetWindow( CoreWindow^ window )
 	window->PointerMoved +=
 		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseMove );
 
-	window->PointerExited +=
-		ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>( this, &App::OnMouseExit );
-
 
 	m_deviceResources->SetWindow( window );
 }
@@ -243,11 +240,6 @@ void App::OnMouseMove( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core:
 	current_mpos = args->CurrentPoint;
 }
 
-void App::OnMouseExit( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args )
-{
-	//throw ref new Platform::NotImplementedException();
-}
-
 char* App::SendKeyboardButtons( void )
 {
 	return kb_buttons;
@@ -255,7 +247,5 @@ char* App::SendKeyboardButtons( void )
 
 Windows::UI::Input::PointerPoint^ App::SendMousePos( void )
 {
-	//throw ref new Platform::NotImplementedException();
-	// TODO: insert return statement here
 	return current_mpos;
 }

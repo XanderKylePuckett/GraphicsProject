@@ -96,5 +96,8 @@
     <Media Include="Assets\Mesh.mobj">
       <Filter>Assets</Filter>
     </Media>
+    <Media Include="Assets\Blade.mobj">
+      <Filter>Assets</Filter>
+    </Media>
   </ItemGroup>
 </Project>

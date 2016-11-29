@@ -41,7 +41,6 @@ namespace DX11UWA
 		void OnMouseButtonDown( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args );
 		void OnMouseButtonUp( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args );
 		void OnMouseMove( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args );
-		void OnMouseExit( Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args );
 
 	private:
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
