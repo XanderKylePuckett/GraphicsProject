@@ -2,6 +2,7 @@
 #include "SceneRenderer.h"
 #include "..\\Common\\DirectXHelper.h"
 #include "..\\Common\\DDSTextureLoader.h"
+#include "Assets\\Talon.h"
 #include <fstream>
 using namespace DX11UWA;
 bool SceneRenderer::renderFileMesh = true;
@@ -74,7 +75,7 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 
 
 	// Update or move camera here
-	UpdateCamera( timer, 1.0f, 0.75f );
+	UpdateCamera( timer, 1.5f, 0.75f );
 	static bool rButtonDown = false;
 	if ( m_kbuttons[ 'R' ] )
 	{
@@ -421,9 +422,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[ ] =
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "TEXCOORD", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "NORMAL", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
 		};
 
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
@@ -435,7 +436,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-	auto createMeshTask = ( createVSTask && createPSTask ).then( [ this ]()
+	auto createMeshTask = createVSTask.then( [ this ]()
 	{
 		Vertex* vertices = nullptr;
 		unsigned int* indices = nullptr;
@@ -459,7 +460,33 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	createMeshTask.then( [ this ]() { m_loadingComplete = true; } );
+	auto createTextureTask = createPSTask.then( [ this ]()
+	{
+		D3D11_TEXTURE2D_DESC textureDesc;
+		D3D11_SUBRESOURCE_DATA textureSubresourceData[ Talon_numlevels ];
+		ZEROSTRUCT( textureDesc );
+		textureDesc.Width = Talon_width;
+		textureDesc.Height = Talon_height;
+		textureDesc.MipLevels = Talon_numlevels;
+		textureDesc.ArraySize = 1u;
+		textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		textureDesc.SampleDesc.Count = 1u;
+		textureDesc.SampleDesc.Quality = 0u;
+		textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		textureDesc.CPUAccessFlags = 0u;
+		textureDesc.MiscFlags = 0u;
+		for ( unsigned int i = 0u; i < Talon_numlevels; ++i )
+		{
+			ZEROSTRUCT( textureSubresourceData[ i ] );
+			textureSubresourceData[ i ].pSysMem = &Talon_pixels[ Talon_leveloffsets[ i ] ];
+			textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
+		}
+		ID3D11Texture2D* texture;
+		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+		texture->Release();
+	} );
+	( createMeshTask && createTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )

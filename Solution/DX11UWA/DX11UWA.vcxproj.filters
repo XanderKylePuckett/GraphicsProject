@@ -72,6 +72,9 @@
     <ClInclude Include="Content\FpsTextRenderer.h">
       <Filter>Content</Filter>
     </ClInclude>
+    <ClInclude Include="Assets\Talon.h">
+      <Filter>Assets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\StoreLogo.png">
@@ -83,9 +86,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DX11UWA_TemporaryKey.pfx" />
-    <None Include="Assets\Talon.mobj">
-      <Filter>Assets</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\VertexShader.hlsl">
@@ -102,5 +102,6 @@
     <Media Include="Assets\Blade.mobj">
       <Filter>Assets</Filter>
     </Media>
+    <Media Include="Assets\Talon.mobj" />
   </ItemGroup>
 </Project>
