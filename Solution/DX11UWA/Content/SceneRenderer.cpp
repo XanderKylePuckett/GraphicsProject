@@ -27,23 +27,9 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 void SceneRenderer::CreateWindowSizeDependentResources( void )
 {
 	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
-	float aspectRatio = outputSize.Width / outputSize.Height;
-	float fovAngleY = 70.0f * DirectX::XM_PI / 180.0f;
+	static float aspectRatio = outputSize.Width / outputSize.Height;
+	static const float fovAngleY = DirectX::XMConvertToRadians( 70.0f );
 
-	// This is a simple example of change that can be made when the app is in
-	// portrait or snapped view.
-	if ( aspectRatio < 1.0f )
-	{
-		fovAngleY *= 2.0f;
-	}
-
-	// Note that the OrientationTransform3D matrix is post-multiplied here
-	// in order to correctly orient the scene to match the display orientation.
-	// This post-multiplication step is required for any draw calls that are
-	// made to the swap chain render target. For draw calls to other targets,
-	// this transform should not be applied.
-
-	// This sample makes use of a right-handed coordinate system using row-major matrices.
 	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
 
 	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
@@ -150,7 +136,7 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 			float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
 			float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
 
-			DirectX::XMFLOAT4 pos( m_camera._41, m_camera._42, m_camera._43, m_camera._44 );
+			DirectX::XMFLOAT3 pos( m_camera._41, m_camera._42, m_camera._43 );
 
 			m_camera._41 = 0.0f;
 			m_camera._42 = 0.0f;
@@ -160,9 +146,7 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 			DirectX::XMMATRIX rotY = DirectX::XMMatrixRotationY( dx * rotSpd * delta_time );
 
 			DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-			temp_camera = XMMatrixMultiply( rotX, temp_camera );
-			temp_camera = XMMatrixMultiply( temp_camera, rotY );
-
+			temp_camera = XMMatrixMultiply( XMMatrixMultiply( rotX, temp_camera ), rotY );
 			XMStoreFloat4x4( &m_camera, temp_camera );
 
 			m_camera._41 = pos.x;
@@ -173,50 +157,35 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 	}
 }
 
-void SceneRenderer::SetKeyboardButtons( const char* list )
-{
-	memcpy_s( m_kbuttons, sizeof( m_kbuttons ), list, sizeof( m_kbuttons ) );
-}
-
-void SceneRenderer::SetMousePosition( const Windows::UI::Input::PointerPoint^ pos )
-{
-	m_currMousePos = const_cast< Windows::UI::Input::PointerPoint^ >( pos );
-}
-
 void SceneRenderer::SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos )
 {
-	SetKeyboardButtons( kb );
-	SetMousePosition( pos );
+	memcpy_s( m_kbuttons, sizeof( m_kbuttons ), kb, sizeof( m_kbuttons ) );
+	m_currMousePos = const_cast< Windows::UI::Input::PointerPoint^ >( pos );
 }
 
 // Renders one frame using the vertex and pixel shaders.
 void SceneRenderer::Render( void )
 {
-	// Loading is asynchronous. Only draw geometry after it's loaded.
 	if ( !m_loadingComplete ) return;
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixInverse( nullptr, XMLoadFloat4x4( &m_camera ) ) ) );
-
-
-	// Prepare the constant buffer to send it to the graphics device.
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
-	// Each vertex is one instance of the Vertex struct.
+
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
+
 	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer.GetAddressOf(), &stride, &offset );
-	// Each index is one 32-bit unsigned integer.
 	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	context->IASetInputLayout( m_inputLayout.Get() );
-	// Attach our vertex shader.
+
 	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
-	// Send the constant buffer to the graphics device.
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
-	// Attach our pixel shader.
+
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
-	// Draw the objects.
+
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 }
 

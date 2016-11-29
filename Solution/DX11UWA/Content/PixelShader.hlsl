@@ -10,6 +10,5 @@ struct PixelShaderInput
 
 float4 main( PixelShaderInput input ) : SV_TARGET
 {
-	float2 uv = float2( input.texcoord.x, input.texcoord.y );
-	return tex.Sample( samplerstate, uv );
+	return tex.Sample( samplerstate, float2( input.texcoord.x, input.texcoord.y ) );
 }
