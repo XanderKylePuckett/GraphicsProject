@@ -6,14 +6,13 @@
 #include "Assets\\star.h"
 #include <fstream>
 using namespace DX11UWA;
-bool SceneRenderer::renderFileMesh = true;
+bool renderCube = false;
 
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
 	m_degreesPerSecond( 45 ),
 	m_indexCount( 0 ),
-	m_tracking( false ),
 	m_deviceResources( deviceResources )
 {
 	memset( m_kbuttons, 0, sizeof( m_kbuttons ) );
@@ -66,36 +65,31 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void SceneRenderer::Update( DX::StepTimer const& timer )
 {
-	if ( !m_tracking )
-	{
-		Rotate( ( float )fmod(
-			timer.GetTotalSeconds() *
-			DirectX::XMConvertToRadians( m_degreesPerSecond ),
-			DirectX::XM_2PI ) );
-	}
+	AnimateMesh( timer );
 
-
-	// Update or move camera here
+// Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
-	static bool rButtonDown = false;
+	static bool cubeToggleButtonDown = false;
 	if ( m_kbuttons[ 'R' ] )
 	{
-		if ( !rButtonDown )
+		if ( !cubeToggleButtonDown )
 		{
-			rButtonDown = true;
+			cubeToggleButtonDown = true;
 			ReleaseDeviceDependentResources();
-			renderFileMesh = !renderFileMesh;
+			renderCube = !renderCube;
 			CreateDeviceDependentResources();
 		}
 	}
-	else
-		rButtonDown = false;
+	else cubeToggleButtonDown = false;
 }
 
-// Rotate the 3D cube model a set amount of radians.
-void SceneRenderer::Rotate( float radians )
+void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
 {
 	// Prepare to pass the updated model matrix to the shader
+	float radians = ( float )fmod(
+		timer.GetTotalSeconds() *
+		DirectX::XMConvertToRadians( m_degreesPerSecond ),
+		DirectX::XM_2PI );
 	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( DirectX::XMMatrixRotationY( radians ) ) );
 }
 
@@ -148,7 +142,11 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 
 	if ( m_currMousePos )
 	{
-		if ( m_currMousePos->Properties->IsLeftButtonPressed && m_prevMousePos )
+		bool mouseButtonPressed =
+			m_currMousePos->Properties->IsLeftButtonPressed ||
+			m_currMousePos->Properties->IsMiddleButtonPressed ||
+			m_currMousePos->Properties->IsRightButtonPressed;
+		if ( m_prevMousePos && mouseButtonPressed )
 		{
 			float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
 			float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
@@ -174,8 +172,6 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 		}
 		m_prevMousePos = m_currMousePos;
 	}
-
-
 }
 
 void SceneRenderer::SetKeyboardButtons( const char* list )
@@ -192,26 +188,6 @@ void SceneRenderer::SetInputDeviceData( const char* kb, const Windows::UI::Input
 {
 	SetKeyboardButtons( kb );
 	SetMousePosition( pos );
-}
-
-void DX11UWA::SceneRenderer::StartTracking( void )
-{
-	m_tracking = true;
-}
-
-// When tracking, the 3D cube can be rotated around its Y axis by tracking pointer position relative to the output screen width.
-void SceneRenderer::TrackingUpdate( float positionX )
-{
-	if ( m_tracking )
-	{
-		float radians = DirectX::XM_2PI * 2.0f * positionX / m_deviceResources->GetOutputSize().Width;
-		Rotate( radians );
-	}
-}
-
-void SceneRenderer::StopTracking( void )
-{
-	m_tracking = false;
 }
 
 // Renders one frame using the vertex and pixel shaders.
@@ -307,7 +283,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	unsigned int& outNumIndices )
 {
 	std::ifstream file;
-	if ( renderFileMesh )
+	if ( !renderCube )
 		file.open( filepath, std::ios_base::in );
 	if ( file.is_open() )
 	{
@@ -484,7 +460,24 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		textureDesc.CPUAccessFlags = 0u;
 		textureDesc.MiscFlags = 0u;
 		unsigned int* pixels = nullptr;
-		if ( renderFileMesh )
+		if ( renderCube )
+		{
+			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ star_numlevels ];
+			textureDesc.Width = star_width;
+			textureDesc.Height = star_height;
+			textureDesc.MipLevels = star_numlevels;
+			pixels = new unsigned int[ star_numpixels ];
+			unsigned int i = 0u;
+			for ( ; i < star_numpixels; ++i )
+				pixels[ i ] = getColor( star_pixels[ i ] );
+			for ( i = 0u; i < star_numlevels; ++i )
+			{
+				ZEROSTRUCT( textureSubresourceData[ i ] );
+				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
+				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
+			}
+		}
+		else
 		{
 			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ Talon_numlevels ];
 			textureDesc.Width = Talon_width;
@@ -501,23 +494,6 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 				textureSubresourceData[ i ].SysMemPitch = ( Talon_width >> i ) * sizeof( unsigned int );
 			}
 			m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
-		}
-		else
-		{
-			textureSubresourceData = new D3D11_SUBRESOURCE_DATA[ star_numlevels ];
-			textureDesc.Width = star_width;
-			textureDesc.Height = star_height;
-			textureDesc.MipLevels = star_numlevels;
-			pixels = new unsigned int[ star_numpixels ];
-			unsigned int i = 0u;
-			for ( ; i < star_numpixels; ++i )
-				pixels[ i ] = getColor( star_pixels[ i ] );
-			for ( i = 0u; i < star_numlevels; ++i )
-			{
-				ZEROSTRUCT( textureSubresourceData[ i ] );
-				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
-				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
-			}
 		}
 		m_deviceResources->GetD3DDevice()->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
 		delete[ ] pixels;
@@ -548,7 +524,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0u;
-		srvDesc.Texture2D.MipLevels = renderFileMesh ? Talon_numlevels : star_numlevels;
+		srvDesc.Texture2D.MipLevels = renderCube ? star_numlevels : Talon_numlevels;
 		ID3D11ShaderResourceView* srv;
 		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( texture, &srvDesc, &srv );
 

@@ -17,10 +17,6 @@ namespace DX11UWA
 		void ReleaseDeviceDependentResources( void );
 		void Update( DX::StepTimer const& timer );
 		void Render( void );
-		void StartTracking( void );
-		void TrackingUpdate( float positionX );
-		void StopTracking( void );
-		inline bool IsTracking( void ) { return m_tracking; }
 
 		// Helper functions for keyboard and mouse input
 		void SetKeyboardButtons( const char* list );
@@ -29,14 +25,13 @@ namespace DX11UWA
 
 
 	private:
-		static bool renderFileMesh;
 		struct IndexTriangle
 		{
 			unsigned int p[ 3 ];
 			unsigned int t[ 3 ];
 			unsigned int n[ 3 ];
 		};
-		void Rotate( float radians );
+		void AnimateMesh( DX::StepTimer const& radians );
 		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
 		static void ObjMesh_ToBuffer( Vertex*&, unsigned int*&, unsigned int&, unsigned int&,
 									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<DirectX::XMFLOAT2>&,
@@ -63,7 +58,6 @@ namespace DX11UWA
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
-		bool	m_tracking;
 
 		// Data members for keyboard and mouse input
 		char	m_kbuttons[ 256 ];
