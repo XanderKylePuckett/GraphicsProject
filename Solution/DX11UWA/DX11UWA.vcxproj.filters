@@ -80,9 +80,6 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\Talon.dds">
-      <Filter>Assets</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -97,8 +94,19 @@
     <FxCompile Include="Content\PixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
+    <FxCompile Include="Content\PixelShader2.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Media Include="Assets\Talon.mobj" />
+    <Media Include="Assets\Talon.mobj">
+      <Filter>Assets</Filter>
+    </Media>
+    <Media Include="Assets\Talon.dds">
+      <Filter>Assets</Filter>
+    </Media>
+    <Media Include="Assets\SunsetSkybox.dds">
+      <Filter>Assets</Filter>
+    </Media>
   </ItemGroup>
 </Project>

@@ -28,9 +28,6 @@ PixelShaderInput main( VertexShaderInput input )
 	pos = mul( pos, model );
 	pos = mul( pos, view );
 	pos = mul( pos, projection );
-	normal = mul( normal, model );
-	normal = mul( normal, view );
-	normal = mul( normal, projection );
 
 	PixelShaderInput output;
 	output.pos = pos;

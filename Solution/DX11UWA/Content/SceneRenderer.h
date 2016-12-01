@@ -49,10 +49,16 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader2;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		uint32	m_indexCount;
+
+		ID3D11Texture2D* texture;
+		ID3D11ShaderResourceView* srv;
+		ID3D11Texture2D* texture2;
+		ID3D11ShaderResourceView* srv2;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

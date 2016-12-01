@@ -173,6 +173,11 @@ void SceneRenderer::Render( void )
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixInverse( nullptr, XMLoadFloat4x4( &m_camera ) ) ) );
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
 
+	//////
+	context->PSSetShader( m_pixelShader2.Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &srv2 );
+	//////
+
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
 
@@ -185,6 +190,7 @@ void SceneRenderer::Render( void )
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
 
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &srv );
 
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 }
@@ -359,9 +365,20 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
-	// Load shaders asynchronously.
-	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
 	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
+	auto loadPSTask2 = DX::ReadDataAsync( L"PixelShader2.cso" );
+	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
+	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
+
+		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
+	} );
+	auto createPSTask2 = loadPSTask2.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader2 ) );
+	} );
 	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fileData[ 0 ], fileData.size(), nullptr, &m_vertexShader ) );
@@ -375,42 +392,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
 	} );
-	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
-	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
-
-		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
-	} );
-	auto createMeshTask = createVSTask.then( [ this ]()
-	{
-		Vertex* vertices = nullptr;
-		unsigned int* indices = nullptr;
-		unsigned int numVertices = 0u, numIndices = 0u;
-
-		ObjMesh_LoadMesh( "Assets\\Talon.mobj", vertices, indices, numVertices, numIndices );
-
-		D3D11_SUBRESOURCE_DATA vertexBufferData;
-		ZEROSTRUCT( vertexBufferData );
-		vertexBufferData.pSysMem = vertices;
-		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
-
-		m_indexCount = numIndices;
-
-		D3D11_SUBRESOURCE_DATA indexBufferData;
-		ZEROSTRUCT( indexBufferData );
-		indexBufferData.pSysMem = indices;
-		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
-
-		ObjMesh_Unload( vertices, indices );
-	} );
 	auto createTextureTask = createPSTask.then( [ this ]()
 	{
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
-		ID3D11Texture2D* texture;
-		ID3D11ShaderResourceView* srv;
 		ID3D11SamplerState* samplerState;
 		D3D11_SAMPLER_DESC samplerDesc;
 		ZEROSTRUCT( samplerDesc );
@@ -458,16 +442,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			srvDesc.Texture2D.MostDetailedMip = 0u;
 			srvDesc.Texture2D.MipLevels = star_numlevels;
 			dev->CreateShaderResourceView( texture, &srvDesc, &srv );
-			m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
-			srv->Release();
-			texture->Release();
 		}
-		else if ( S_OK == CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &texture ), &srv ) )
-		{
-			m_deviceResources->GetD3DDeviceContext()->PSSetShaderResources( 0u, 1u, &srv );
-			srv->Release();
-			texture->Release();
-		}
+		else CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &texture ), &srv );
 
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -486,7 +462,35 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
 		samplerState->Release();
 	} );
-	( createMeshTask && createTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
+	auto createTextureTask2 = createPSTask2.then( [ this ]()
+	{
+		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\SunsetSkybox.dds", ( ID3D11Resource** )&texture2, &srv2 );
+	} );
+	auto createMeshTask = createVSTask.then( [ this ]()
+	{
+		Vertex* vertices = nullptr;
+		unsigned int* indices = nullptr;
+		unsigned int numVertices = 0u, numIndices = 0u;
+
+		ObjMesh_LoadMesh( "Assets\\Talon.mobj", vertices, indices, numVertices, numIndices );
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		vertexBufferData.pSysMem = vertices;
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
+
+		m_indexCount = numIndices;
+
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( indexBufferData );
+		indexBufferData.pSysMem = indices;
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
+
+		ObjMesh_Unload( vertices, indices );
+	} );
+	( createMeshTask && createTextureTask && createTextureTask2 ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -495,7 +499,12 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_vertexShader.Reset();
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
+	m_pixelShader2.Reset();
 	m_constantBuffer.Reset();
 	m_vertexBuffer.Reset();
 	m_indexBuffer.Reset();
+	texture2->Release();
+	srv2->Release();
+	texture->Release();
+	srv->Release();
 }

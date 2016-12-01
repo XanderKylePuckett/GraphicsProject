@@ -4,7 +4,6 @@
 #include "Common\\DirectXHelper.h"
 
 using namespace DX11UWA;
-using namespace Microsoft::WRL;
 
 // Initializes D2D resources used for text rendering.
 FpsTextRenderer::FpsTextRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
@@ -14,7 +13,7 @@ FpsTextRenderer::FpsTextRenderer( const std::shared_ptr<DX::DeviceResources>& de
 	ZeroMemory( &m_textMetrics, sizeof( DWRITE_TEXT_METRICS ) );
 
 	// Create device independent resources
-	ComPtr<IDWriteTextFormat> textFormat;
+	Microsoft::WRL::ComPtr<IDWriteTextFormat> textFormat;
 	DX::ThrowIfFailed(
 		m_deviceResources->GetDWriteFactory()->CreateTextFormat(
 		L"Segoe UI",
@@ -51,7 +50,7 @@ void FpsTextRenderer::Update( DX::StepTimer const& timer )
 
 	m_text = ( fps > 0 ) ? std::to_wstring( fps ) + L" FPS" : L" - FPS";
 
-	ComPtr<IDWriteTextLayout> textLayout;
+	Microsoft::WRL::ComPtr<IDWriteTextLayout> textLayout;
 	DX::ThrowIfFailed(
 		m_deviceResources->GetDWriteFactory()->CreateTextLayout(
 		m_text.c_str(),
