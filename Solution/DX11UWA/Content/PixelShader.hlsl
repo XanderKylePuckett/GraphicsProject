@@ -4,6 +4,7 @@ SamplerState samplerstate : register( s0 );
 struct PixelShaderInput
 {
 	float4 pos : SV_POSITION;
+	float4 posL : PL;
 	float4 texcoord : TEXCOORD;
 	float4 normal : NORMAL;
 };

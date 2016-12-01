@@ -171,23 +171,59 @@ void SceneRenderer::Render( void )
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixInverse( nullptr, XMLoadFloat4x4( &m_camera ) ) ) );
-	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
-
-	//////
-	context->PSSetShader( m_pixelShader2.Get(), nullptr, 0u );
-	context->PSSetShaderResources( 0u, 1u, &srv2 );
-	//////
 
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
 
-	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer.GetAddressOf(), &stride, &offset );
-	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	context->IASetInputLayout( m_inputLayout.Get() );
 
 	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
+
+	//////
+	ID3D11DepthStencilState* dsState;
+	D3D11_DEPTH_STENCIL_DESC dsDesc;
+	ZEROSTRUCT( dsDesc );
+	dsDesc.DepthEnable = FALSE;
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	dsDesc.StencilEnable = FALSE;
+	dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+	dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+	dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
+	context->OMSetDepthStencilState( dsState, 1u );
+	dsState->Release();
+	context->PSSetShader( m_pixelShader2.Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &srv2 );
+
+	DirectX::XMMATRIX camPosMat = DirectX::XMMatrixTranslation( m_camera._41, m_camera._42, m_camera._43 );
+	DirectX::XMFLOAT4X4 model = m_constantBufferData.model;
+	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( camPosMat ) );
+	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
+	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer2.GetAddressOf(), &stride, &offset );
+	context->IASetIndexBuffer( m_indexBuffer2.Get(), DXGI_FORMAT_R32_UINT, 0u );
+
+	context->DrawIndexed( 36u, 0u, 0 );
+
+	m_constantBufferData.model = model;
+	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
+	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
+	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer.GetAddressOf(), &stride, &offset );
+	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
+	dsDesc.DepthEnable = TRUE;
+	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
+	context->OMSetDepthStencilState( dsState, 1u );
+	dsState->Release();
+	//////
 
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
 	context->PSSetShaderResources( 0u, 1u, &srv );
@@ -316,7 +352,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	}
 	else
 	{
-		static const Vertex tempVertices[ ] =
+		static const Vertex cubeVertices[ ] =
 		{
 			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
 			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
@@ -327,7 +363,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
 			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
 		};
-		static const unsigned int tempIndices[ ] =
+		static const unsigned int cubeIndices[ ] =
 		{
 			0u, 1u, 2u,
 			1u, 3u, 2u,
@@ -351,8 +387,8 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		outNumIndices = 36u;
 		outVertices = new Vertex[ outNumVertices ];
 		outIndices = new unsigned int[ outNumIndices ];
-		memcpy_s( outVertices, sizeof( Vertex ) * outNumVertices, tempVertices, sizeof( tempVertices ) );
-		memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, tempIndices, sizeof( tempIndices ) );
+		memcpy_s( outVertices, sizeof( Vertex ) * outNumVertices, cubeVertices, sizeof( cubeVertices ) );
+		memcpy_s( outIndices, sizeof( unsigned int ) * outNumIndices, cubeIndices, sizeof( cubeIndices ) );
 	}
 }
 void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
@@ -490,7 +526,42 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	( createMeshTask && createTextureTask && createTextureTask2 ).then( [ this ]() { m_loadingComplete = true; } );
+	auto createMeshTask2 = createMeshTask.then( [ this ]()
+	{
+		static const Vertex vertices[ 8u ] =
+		{
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) }
+		};
+		static const unsigned int indices[ 36u ] =
+		{
+			0u, 1u, 2u, 0u, 2u, 3u,
+			0u, 3u, 4u, 0u, 4u, 1u,
+			1u, 4u, 5u, 1u, 5u, 2u,
+			2u, 5u, 6u, 2u, 6u, 3u,
+			3u, 6u, 7u, 3u, 7u, 4u,
+			4u, 6u, 5u, 4u, 7u, 6u
+		};
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		vertexBufferData.pSysMem = vertices;
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 8u, D3D11_BIND_VERTEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer2 ) );
+
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( indexBufferData );
+		indexBufferData.pSysMem = indices;
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer2 ) );
+	} );
+	( createMeshTask2 && createTextureTask && createTextureTask2 ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -502,7 +573,9 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_pixelShader2.Reset();
 	m_constantBuffer.Reset();
 	m_vertexBuffer.Reset();
+	m_vertexBuffer2.Reset();
 	m_indexBuffer.Reset();
+	m_indexBuffer2.Reset();
 	texture2->Release();
 	srv2->Release();
 	texture->Release();
