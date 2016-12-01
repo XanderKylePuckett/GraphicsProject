@@ -65,6 +65,18 @@ bool DX11UWAMain::Render( void )
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
+	//// // //
+	////
+	//////
+	//D3D11_TEXTURE2D_DESC rttTexDesc;
+	//ZEROSTRUCT( rttTexDesc );
+	//rttTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	//rttTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	//rttTexDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	//////
+	////
+	//// // //
+
 	// Reset the viewport to target the whole screen.
 	auto viewport = m_deviceResources->GetScreenViewport();
 	context->RSSetViewports( 1, &viewport );

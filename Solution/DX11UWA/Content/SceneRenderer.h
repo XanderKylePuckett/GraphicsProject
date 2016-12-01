@@ -19,8 +19,6 @@ namespace DX11UWA
 		void Render( void );
 
 		// Helper functions for keyboard and mouse input
-		void SetKeyboardButtons( const char* list );
-		void SetMousePosition( const Windows::UI::Input::PointerPoint^ pos );
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
 
 
