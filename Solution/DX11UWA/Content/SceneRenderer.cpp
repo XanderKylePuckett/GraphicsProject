@@ -500,7 +500,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createTextureTask2 = createPSTask2.then( [ this ]()
 	{
-		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\SunsetSkybox.dds", ( ID3D11Resource** )&texture2, &srv2 );
+		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&texture2, &srv2 );
 	} );
 	auto createMeshTask = createVSTask.then( [ this ]()
 	{
