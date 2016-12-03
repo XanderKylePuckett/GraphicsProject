@@ -82,7 +82,7 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 void SceneRenderer::CreateWindowSizeDependentResources( void )
 {
 	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
-	static float aspectRatio = outputSize.Width / outputSize.Height;
+	float aspectRatio = outputSize.Width / outputSize.Height;
 	static const float fovAngleY = DirectX::XMConvertToRadians( 70.0f );
 
 	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
@@ -155,6 +155,19 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 		CreateDeviceDependentResources();
 	}
 	if ( KeyHit( 'P' ) ) drawPlane = !drawPlane;
+
+#if 1
+	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
+	float aspectRatio = outputSize.Width / outputSize.Height;
+	static float fov = 70.0f;
+	if ( m_kbuttons[ '8' ] ) fov -= timer.GetElapsedSeconds() * 30.0f;
+	if ( m_kbuttons[ '9' ] ) fov += timer.GetElapsedSeconds() * 30.0f;
+	float fovAngleY = DirectX::XMConvertToRadians( fov );
+	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
+	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
+	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
+	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
+#endif
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
@@ -678,14 +691,14 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	{
 		static const Vertex vertices[ 8u ] =
 		{
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) }
+			{ DirectX::XMFLOAT4( -60.025f, 60.025f, 60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 60.025f, 60.025f, 60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 60.025f, -60.025f, 60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -60.025f, -60.025f, 60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -60.025f, 60.025f, -60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 60.025f, 60.025f, -60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( 60.025f, -60.025f, -60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
+			{ DirectX::XMFLOAT4( -60.025f, -60.025f, -60.025f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) }
 		};
 		static const unsigned int indices[ 36u ] =
 		{
