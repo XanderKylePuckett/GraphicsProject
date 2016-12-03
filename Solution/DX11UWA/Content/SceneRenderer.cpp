@@ -22,6 +22,19 @@ bool SceneRenderer::KeyHit( char key )
 	return false;
 }
 
+void SceneRenderer::ToggleWireframe( void )
+{
+	ID3D11RasterizerState* rsState;
+	D3D11_RASTERIZER_DESC rsDesc;
+	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
+	rsState->GetDesc( &rsDesc );
+	rsState->Release();
+	rsDesc.FillMode = ( ( rsDesc.FillMode ) == ( D3D11_FILL_SOLID ) ? ( D3D11_FILL_WIREFRAME ) : ( D3D11_FILL_SOLID ) );
+	m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
+	m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+	rsState->Release();
+}
+
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
@@ -83,6 +96,7 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 	if ( KeyHit( '5' ) ) m_lightingCBufferData.lightState.w = 2.0f;
 	if ( KeyHit( '6' ) ) m_lightingCBufferData.lightState.w = 3.0f;
 	if ( KeyHit( '7' ) ) m_lightingCBufferData.lightState.w = 4.0f;
+	if ( KeyHit( 'K' ) ) ToggleWireframe();
 
 	if ( lightAnim )
 	{
@@ -515,7 +529,7 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
 	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
-	auto loadSkyPSTask = DX::ReadDataAsync( L"PixelShader2.cso" );
+	auto loadSkyPSTask = DX::ReadDataAsync( L"PixelShaderSky.cso" );
 	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
 	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
@@ -677,7 +691,25 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createSkyMeshTask && createTextureTask && createSkyTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
+	( createSkyMeshTask && createTextureTask && createSkyTextureTask ).then( [ this ]()
+	{
+		ID3D11RasterizerState* rsState;
+		D3D11_RASTERIZER_DESC rsDesc;
+		ZEROSTRUCT( rsDesc );
+		rsDesc.FillMode = D3D11_FILL_SOLID;
+		rsDesc.CullMode = D3D11_CULL_NONE;
+		rsDesc.FrontCounterClockwise = FALSE;
+		rsDesc.DepthBias = 0;
+		rsDesc.SlopeScaledDepthBias = 0.0f;
+		rsDesc.DepthBiasClamp = 0.0f;
+		rsDesc.DepthClipEnable = TRUE;
+		rsDesc.ScissorEnable = FALSE;
+		rsDesc.MultisampleEnable = FALSE;
+		rsDesc.AntialiasedLineEnable = FALSE;
+		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
+		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+		rsState->Release();
+	} ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )

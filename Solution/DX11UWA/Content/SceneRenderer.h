@@ -39,6 +39,7 @@ namespace DX11UWA
 		static void ObjMesh_Unload( Vertex*&, unsigned int*& );
 
 		void DrawPlane( void );
+		void ToggleWireframe( void );
 
 		bool SceneRenderer::KeyHit( char key );
 

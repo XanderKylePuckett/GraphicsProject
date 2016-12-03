@@ -94,7 +94,7 @@
     <FxCompile Include="Content\PixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
-    <FxCompile Include="Content\PixelShader2.hlsl">
+    <FxCompile Include="Content\PixelShaderSky.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
   </ItemGroup>

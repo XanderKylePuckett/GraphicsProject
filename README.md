@@ -22,6 +22,8 @@ T - toggle rotation of directional light / toggle motion of point light
 
 P - toggle rendering of ground plane
 
+K - toggle wireframe
+
 3 - All colors
 
 4 - Gray (Red)
