@@ -108,5 +108,8 @@
     <Media Include="Assets\Skybox.dds">
       <Filter>Assets</Filter>
     </Media>
+    <Media Include="Assets\Plane.dds">
+      <Filter>Assets</Filter>
+    </Media>
   </ItemGroup>
 </Project>

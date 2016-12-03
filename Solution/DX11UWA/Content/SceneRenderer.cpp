@@ -10,6 +10,7 @@ bool renderCube = false;
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
+	drawPlane( true ),
 	m_degreesPerSecond( 45 ),
 	m_indexCount( 0 ),
 	m_deviceResources( deviceResources )
@@ -49,10 +50,37 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
 }
 
+void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
+{
+	static bool lightAnim = true;
+	static bool lightanimToggleButtonDown = false;
+	if ( m_kbuttons[ 'T' ] )
+	{
+		if ( !lightanimToggleButtonDown )
+		{
+			lightAnim = !lightAnim;
+			lightanimToggleButtonDown = true;
+		}
+	}
+	else lightanimToggleButtonDown = false;
+
+	if ( lightAnim )
+	{
+		static double animTime = 0.0;
+		animTime += timer.GetElapsedSeconds();
+		DirectX::XMFLOAT4 dir( -1.0f, -1.0f, 1.0f, 1.0f );
+		DirectX::XMVECTOR v = DirectX::XMLoadFloat4( &dir );
+		DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
+		v = DirectX::XMVector3Transform( v, m );
+		DirectX::XMStoreFloat4( &m_lightingCBufferData.dLightDirection, v );
+	}
+}
+
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void SceneRenderer::Update( DX::StepTimer const& timer )
 {
 	AnimateMesh( timer );
+	UpdateLights( timer );
 
 // Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
@@ -68,6 +96,17 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 		}
 	}
 	else cubeToggleButtonDown = false;
+
+	static bool planeToggleButtonDown = false;
+	if ( m_kbuttons[ 'P' ] )
+	{
+		if ( !planeToggleButtonDown )
+		{
+			planeToggleButtonDown = true;
+			drawPlane = !drawPlane;
+		}
+	}
+	else planeToggleButtonDown = false;
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
@@ -165,6 +204,58 @@ void SceneRenderer::SetInputDeviceData( const char* kb, const Windows::UI::Input
 	m_currMousePos = const_cast< Windows::UI::Input::PointerPoint^ >( pos );
 }
 
+void SceneRenderer::DrawPlane( void )
+{
+	ID3D11Buffer* vertexBuffer;
+	ID3D11Buffer* indexBuffer;
+	ID3D11Buffer* constantBuffer;
+	ID3D11Texture2D* planeTexture;
+	ID3D11ShaderResourceView* planeSrv;
+	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
+	ID3D11Device3* const device = m_deviceResources->GetD3DDevice();
+	ModelViewProjectionConstantBuffer mvpCbufferData;
+	UINT stride = sizeof( Vertex );
+	UINT offset = 0u;
+	CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+	D3D11_SUBRESOURCE_DATA vertexBufferData;
+	D3D11_SUBRESOURCE_DATA indexBufferData;
+	ZEROSTRUCT( vertexBufferData );
+	ZEROSTRUCT( indexBufferData );
+	CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
+	CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 6u, D3D11_BIND_INDEX_BUFFER );
+	static const Vertex vertices[ 4 ] =
+	{
+		{ DirectX::XMFLOAT4( -10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+	};
+	static const unsigned int indices[ 6 ] = { 0u, 1u, 2u, 0u, 2u, 3u };
+	vertexBufferData.pSysMem = vertices;
+	indexBufferData.pSysMem = indices;
+	XMStoreFloat4x4( &mvpCbufferData.model, DirectX::XMMatrixIdentity() );
+	mvpCbufferData.projection = m_constantBufferData.projection;
+	mvpCbufferData.view = m_constantBufferData.view;
+
+	CreateDDSTextureFromFile( device, L"Assets\\Plane.dds", ( ID3D11Resource** )&planeTexture, &planeSrv );
+	device->CreateBuffer( &constantBufferDesc, nullptr, &constantBuffer );
+	device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &vertexBuffer );
+	device->CreateBuffer( &indexBufferDesc, &indexBufferData, &indexBuffer );
+
+	context->UpdateSubresource1( constantBuffer, 0u, nullptr, &mvpCbufferData, 0u, 0u, 0u );
+	context->VSSetConstantBuffers1( 0u, 1u, &constantBuffer, nullptr, nullptr );
+	context->IASetVertexBuffers( 0u, 1u, &vertexBuffer, &stride, &offset );
+	context->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0u );
+	context->PSSetShaderResources( 0u, 1u, &planeSrv );
+	context->DrawIndexed( 6u, 0u, 0 );
+
+	vertexBuffer->Release();
+	indexBuffer->Release();
+	constantBuffer->Release();
+	planeTexture->Release();
+	planeSrv->Release();
+}
+
 // Renders one frame using the vertex and pixel shaders.
 void SceneRenderer::Render( void )
 {
@@ -203,16 +294,16 @@ void SceneRenderer::Render( void )
 	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
 	context->OMSetDepthStencilState( dsState, 1u );
 	dsState->Release();
-	context->PSSetShader( m_pixelShader2.Get(), nullptr, 0u );
-	context->PSSetShaderResources( 0u, 1u, &srv2 );
+	context->PSSetShader( m_skyPixelShader.Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &skySrv );
 
 	DirectX::XMMATRIX camPosMat = DirectX::XMMatrixTranslation( m_camera._41, m_camera._42, m_camera._43 );
 	DirectX::XMFLOAT4X4 model = m_constantBufferData.model;
 	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( camPosMat ) );
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
-	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer2.GetAddressOf(), &stride, &offset );
-	context->IASetIndexBuffer( m_indexBuffer2.Get(), DXGI_FORMAT_R32_UINT, 0u );
+	context->IASetVertexBuffers( 0u, 1u, m_skyVertexBuffer.GetAddressOf(), &stride, &offset );
+	context->IASetIndexBuffer( m_skyIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 
 	context->DrawIndexed( 36u, 0u, 0 );
 
@@ -233,6 +324,8 @@ void SceneRenderer::Render( void )
 	context->PSSetConstantBuffers1( 0u, 1u, m_lightingCBuffer.GetAddressOf(), nullptr, nullptr );
 
 	context->DrawIndexed( m_indexCount, 0u, 0 );
+
+	if ( drawPlane ) DrawPlane();
 }
 
 bool operator==( const Vertex& lhs, const Vertex& rhs )
@@ -406,7 +499,7 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
 	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
-	auto loadPSTask2 = DX::ReadDataAsync( L"PixelShader2.cso" );
+	auto loadSkyPSTask = DX::ReadDataAsync( L"PixelShader2.cso" );
 	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
 	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
@@ -415,9 +508,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC lightingCBufferDesc( sizeof( LightingConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &lightingCBufferDesc, nullptr, &m_lightingCBuffer ) );
 	} );
-	auto createPSTask2 = loadPSTask2.then( [ this ]( const std::vector<byte>& fileData )
+	auto createSkyPSTask = loadSkyPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader2 ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_skyPixelShader ) );
 	} );
 	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
@@ -505,9 +598,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
 		samplerState->Release();
 	} );
-	auto createTextureTask2 = createPSTask2.then( [ this ]()
+	auto createSkyTextureTask = createSkyPSTask.then( [ this ]()
 	{
-		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&texture2, &srv2 );
+		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&skyTexture, &skySrv );
 	} );
 	auto createMeshTask = createVSTask.then( [ this ]()
 	{
@@ -533,7 +626,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	auto createMeshTask2 = createMeshTask.then( [ this ]()
+	auto createSkyMeshTask = createMeshTask.then( [ this ]()
 	{
 		static const Vertex vertices[ 8u ] =
 		{
@@ -560,15 +653,15 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		ZEROSTRUCT( vertexBufferData );
 		vertexBufferData.pSysMem = vertices;
 		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 8u, D3D11_BIND_VERTEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer2 ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_skyVertexBuffer ) );
 
 		D3D11_SUBRESOURCE_DATA indexBufferData;
 		ZEROSTRUCT( indexBufferData );
 		indexBufferData.pSysMem = indices;
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer2 ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createMeshTask2 && createTextureTask && createTextureTask2 ).then( [ this ]() { m_loadingComplete = true; } );
+	( createSkyMeshTask && createTextureTask && createSkyTextureTask ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -577,15 +670,15 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_vertexShader.Reset();
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
-	m_pixelShader2.Reset();
+	m_skyPixelShader.Reset();
 	m_constantBuffer.Reset();
 	m_vertexBuffer.Reset();
-	m_vertexBuffer2.Reset();
+	m_skyVertexBuffer.Reset();
 	m_indexBuffer.Reset();
-	m_indexBuffer2.Reset();
+	m_skyIndexBuffer.Reset();
 	m_lightingCBuffer.Reset();
-	texture2->Release();
-	srv2->Release();
+	skyTexture->Release();
+	skySrv->Release();
 	texture->Release();
 	srv->Release();
 }

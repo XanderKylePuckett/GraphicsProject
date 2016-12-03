@@ -29,13 +29,16 @@ namespace DX11UWA
 			unsigned int t[ 3 ];
 			unsigned int n[ 3 ];
 		};
-		void AnimateMesh( DX::StepTimer const& radians );
+		void UpdateLights( DX::StepTimer const& timer );
+		void AnimateMesh( DX::StepTimer const& timer );
 		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
 		static void ObjMesh_ToBuffer( Vertex*&, unsigned int*&, unsigned int&, unsigned int&,
 									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<DirectX::XMFLOAT2>&,
 									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<IndexTriangle>& );
 		static void ObjMesh_LoadMesh( const char* const, Vertex*&, unsigned int*&, unsigned int&, unsigned int& );
 		static void ObjMesh_Unload( Vertex*&, unsigned int*& );
+
+		void DrawPlane( void );
 
 	private:
 		// Cached pointer to device resources.
@@ -44,12 +47,12 @@ namespace DX11UWA
 		// Direct3D resources for cube geometry.
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer2;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer2;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader2;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingCBuffer;
 
@@ -59,12 +62,13 @@ namespace DX11UWA
 
 		ID3D11Texture2D* texture;
 		ID3D11ShaderResourceView* srv;
-		ID3D11Texture2D* texture2;
-		ID3D11ShaderResourceView* srv2;
+		ID3D11Texture2D* skyTexture;
+		ID3D11ShaderResourceView* skySrv;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
+		bool drawPlane;
 
 		// Data members for keyboard and mouse input
 		char	m_kbuttons[ 256 ];
