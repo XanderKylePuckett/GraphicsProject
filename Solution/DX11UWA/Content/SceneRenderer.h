@@ -51,8 +51,10 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader2;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingCBuffer;
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
+		LightingConstantBuffer	m_lightingCBufferData;
 		uint32	m_indexCount;
 
 		ID3D11Texture2D* texture;

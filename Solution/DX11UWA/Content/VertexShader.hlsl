@@ -23,17 +23,20 @@ struct PixelShaderInput
 PixelShaderInput main( VertexShaderInput input )
 {
 	float4 pos = float4( input.pos );
-	float4 normal = float4( input.normal );
+	float4 normal = float4( normalize( input.normal.xyz ), 1.0f );
 	float4 texcoord = float4( input.texcoord );
 
 	pos = mul( pos, model );
 	pos = mul( pos, view );
 	pos = mul( pos, projection );
+	normal = mul( normal, model );
+	//normal = mul( normal, view );
+	normal = mul( normal, projection );
 
 	PixelShaderInput output;
 	output.pos = pos;
 	output.posL = input.pos;
-	output.normal = normal;
+	output.normal = float4( normalize( normal.xyz ), 1.0f );
 	output.texcoord = texcoord;
 	return output;
 }

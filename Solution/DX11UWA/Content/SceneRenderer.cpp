@@ -45,6 +45,8 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 
 	XMStoreFloat4x4( &m_camera, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
+
+	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
 }
 
 // Called once per frame, rotates the cube and calculates the model and view matrices.
@@ -227,6 +229,8 @@ void SceneRenderer::Render( void )
 
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
 	context->PSSetShaderResources( 0u, 1u, &srv );
+	context->UpdateSubresource1( m_lightingCBuffer.Get(), 0u, nullptr, &m_lightingCBufferData, 0u, 0u, 0u );
+	context->PSSetConstantBuffers1( 0u, 1u, m_lightingCBuffer.GetAddressOf(), nullptr, nullptr );
 
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 }
@@ -354,14 +358,14 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	{
 		static const Vertex cubeVertices[ ] =
 		{
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ) }
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( -1.0f, -1.0f, -1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( -1.0f, 1.0f, -1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( -1.0f, 1.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, -1.0f, 1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, -1.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) , DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) }
 		};
 		static const unsigned int cubeIndices[ ] =
 		{
@@ -408,8 +412,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
 
-		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
+		CD3D11_BUFFER_DESC lightingCBufferDesc( sizeof( LightingConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &lightingCBufferDesc, nullptr, &m_lightingCBuffer ) );
 	} );
 	auto createPSTask2 = loadPSTask2.then( [ this ]( const std::vector<byte>& fileData )
 	{
@@ -427,6 +431,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		};
 
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
+
+		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
 	auto createTextureTask = createPSTask.then( [ this ]()
 	{
@@ -576,6 +583,7 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_vertexBuffer2.Reset();
 	m_indexBuffer.Reset();
 	m_indexBuffer2.Reset();
+	m_lightingCBuffer.Reset();
 	texture2->Release();
 	srv2->Release();
 	texture->Release();
