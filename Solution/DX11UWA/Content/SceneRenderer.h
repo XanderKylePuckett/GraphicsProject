@@ -40,6 +40,8 @@ namespace DX11UWA
 
 		void DrawPlane( void );
 
+		bool SceneRenderer::KeyHit( char key );
+
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;

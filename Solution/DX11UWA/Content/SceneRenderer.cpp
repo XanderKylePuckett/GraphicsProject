@@ -7,6 +7,21 @@
 using namespace DX11UWA;
 bool renderCube = true;
 
+bool SceneRenderer::KeyHit( char key )
+{
+	static bool keys[ 256 ] = { false };
+	if ( m_kbuttons[ key ] )
+	{
+		if ( !keys[ key ] )
+		{
+			keys[ key ] = true;
+			return true;
+		}
+	}
+	else keys[ key ] = false;
+	return false;
+}
+
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
@@ -19,6 +34,15 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	m_currMousePos = nullptr;
 	m_prevMousePos = nullptr;
 	memset( &m_camera, 0, sizeof( DirectX::XMFLOAT4X4 ) );
+
+	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
+	m_lightingCBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
+	m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
+	m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.25f, 0.25f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.25f, 1.0f, 0.25f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.25f, 0.25f, 1.0f, 10.0f );
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -46,52 +70,14 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 
 	XMStoreFloat4x4( &m_camera, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
-
-	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
-	m_lightingCBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
-	m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
-	m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
-	m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
-	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.25f, 0.25f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.25f, 1.0f, 0.25f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.25f, 0.25f, 1.0f, 10.0f );
 }
 
 void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 {
 	static bool lightAnim = true;
-	static bool lightanimToggleButtonDown = false;
-	if ( m_kbuttons[ 'T' ] )
-	{
-		if ( !lightanimToggleButtonDown )
-		{
-			lightAnim = !lightAnim;
-			lightanimToggleButtonDown = true;
-		}
-	}
-	else lightanimToggleButtonDown = false;
-
-	static bool dirToggleButtonDown = false;
-	if ( m_kbuttons[ '1' ] )
-	{
-		if ( !dirToggleButtonDown )
-		{
-			dirToggleButtonDown = true;
-			m_lightingCBufferData.lightState.x = m_lightingCBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
-		}
-	}
-	else dirToggleButtonDown = false;
-
-	static bool pToggleButtonDown = false;
-	if ( m_kbuttons[ '2' ] )
-	{
-		if ( !pToggleButtonDown )
-		{
-			pToggleButtonDown = true;
-			m_lightingCBufferData.lightState.y = m_lightingCBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
-		}
-	}
-	else pToggleButtonDown = false;
+	if ( KeyHit( 'T' ) ) lightAnim = !lightAnim;
+	if ( KeyHit( '1' ) ) m_lightingCBufferData.lightState.x = m_lightingCBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
+	if ( KeyHit( '2' ) ) m_lightingCBufferData.lightState.y = m_lightingCBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
 
 	if ( lightAnim )
 	{
@@ -124,29 +110,14 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 
 // Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
-	static bool cubeToggleButtonDown = false;
-	if ( m_kbuttons[ 'R' ] )
-	{
-		if ( !cubeToggleButtonDown )
-		{
-			cubeToggleButtonDown = true;
-			ReleaseDeviceDependentResources();
-			renderCube = !renderCube;
-			CreateDeviceDependentResources();
-		}
-	}
-	else cubeToggleButtonDown = false;
 
-	static bool planeToggleButtonDown = false;
-	if ( m_kbuttons[ 'P' ] )
+	if ( KeyHit( 'R' ) )
 	{
-		if ( !planeToggleButtonDown )
-		{
-			planeToggleButtonDown = true;
-			drawPlane = !drawPlane;
-		}
+		ReleaseDeviceDependentResources();
+		renderCube = !renderCube;
+		CreateDeviceDependentResources();
 	}
-	else planeToggleButtonDown = false;
+	if ( KeyHit( 'P' ) ) drawPlane = !drawPlane;
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
