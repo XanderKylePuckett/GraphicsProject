@@ -59,6 +59,23 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+
+	ID3D11RasterizerState* rsState;
+	D3D11_RASTERIZER_DESC rsDesc;
+	ZEROSTRUCT( rsDesc );
+	rsDesc.FillMode = D3D11_FILL_SOLID;
+	rsDesc.CullMode = D3D11_CULL_NONE;
+	rsDesc.FrontCounterClockwise = FALSE;
+	rsDesc.DepthBias = 0;
+	rsDesc.SlopeScaledDepthBias = 0.0f;
+	rsDesc.DepthBiasClamp = 0.0f;
+	rsDesc.DepthClipEnable = TRUE;
+	rsDesc.ScissorEnable = FALSE;
+	rsDesc.MultisampleEnable = FALSE;
+	rsDesc.AntialiasedLineEnable = FALSE;
+	m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
+	m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+	rsState->Release();
 }
 
 // Initializes view parameters when the window size changes.
@@ -96,7 +113,6 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 	if ( KeyHit( '5' ) ) m_lightingCBufferData.lightState.w = 2.0f;
 	if ( KeyHit( '6' ) ) m_lightingCBufferData.lightState.w = 3.0f;
 	if ( KeyHit( '7' ) ) m_lightingCBufferData.lightState.w = 4.0f;
-	if ( KeyHit( 'K' ) ) ToggleWireframe();
 
 	if ( lightAnim )
 	{
@@ -126,6 +142,8 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 {
 	AnimateMesh( timer );
 	UpdateLights( timer );
+
+	if ( m_loadingComplete ) if ( KeyHit( 'K' ) ) ToggleWireframe();
 
 // Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
@@ -693,22 +711,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	( createSkyMeshTask && createTextureTask && createSkyTextureTask ).then( [ this ]()
 	{
-		ID3D11RasterizerState* rsState;
-		D3D11_RASTERIZER_DESC rsDesc;
-		ZEROSTRUCT( rsDesc );
-		rsDesc.FillMode = D3D11_FILL_SOLID;
-		rsDesc.CullMode = D3D11_CULL_NONE;
-		rsDesc.FrontCounterClockwise = FALSE;
-		rsDesc.DepthBias = 0;
-		rsDesc.SlopeScaledDepthBias = 0.0f;
-		rsDesc.DepthBiasClamp = 0.0f;
-		rsDesc.DepthClipEnable = TRUE;
-		rsDesc.ScissorEnable = FALSE;
-		rsDesc.MultisampleEnable = FALSE;
-		rsDesc.AntialiasedLineEnable = FALSE;
-		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
-		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
-		rsState->Release();
+
 	} ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
