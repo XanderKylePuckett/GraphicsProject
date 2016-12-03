@@ -5,7 +5,7 @@
 #include "Assets\\star.h"
 #include <fstream>
 using namespace DX11UWA;
-bool renderCube = false;
+bool renderCube = true;
 
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
@@ -48,6 +48,13 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 	XMStoreFloat4x4( &m_constantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
 
 	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
+	m_lightingCBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
+	m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
+	m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.25f, 0.25f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.25f, 1.0f, 0.25f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.25f, 0.25f, 1.0f, 10.0f );
 }
 
 void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
@@ -64,6 +71,28 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 	}
 	else lightanimToggleButtonDown = false;
 
+	static bool dirToggleButtonDown = false;
+	if ( m_kbuttons[ '1' ] )
+	{
+		if ( !dirToggleButtonDown )
+		{
+			dirToggleButtonDown = true;
+			m_lightingCBufferData.lightState.x = m_lightingCBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
+		}
+	}
+	else dirToggleButtonDown = false;
+
+	static bool pToggleButtonDown = false;
+	if ( m_kbuttons[ '2' ] )
+	{
+		if ( !pToggleButtonDown )
+		{
+			pToggleButtonDown = true;
+			m_lightingCBufferData.lightState.y = m_lightingCBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
+		}
+	}
+	else pToggleButtonDown = false;
+
 	if ( lightAnim )
 	{
 		static double animTime = 0.0;
@@ -71,6 +100,17 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 		DirectX::XMFLOAT4 dir( -1.0f, -1.0f, 1.0f, 1.0f );
 		DirectX::XMVECTOR v = DirectX::XMLoadFloat4( &dir );
 		DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
+		static const float pLightDist = 2.0f;
+		static const float sq3div2 = 0.8660254f;
+		m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, pLightDist, 1.0f );
+		m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
+		m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
+		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos0, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos0 ), m ) );
+		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos1, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos1 ), m ) );
+		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos2, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos2 ), m ) );
 		v = DirectX::XMVector3Transform( v, m );
 		DirectX::XMStoreFloat4( &m_lightingCBufferData.dLightDirection, v );
 	}
