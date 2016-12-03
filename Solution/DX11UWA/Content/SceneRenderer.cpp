@@ -40,9 +40,9 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
 	m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
 	m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
-	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.25f, 0.25f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.25f, 1.0f, 0.25f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.25f, 0.25f, 1.0f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 10.0f );
+	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 10.0f );
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -78,6 +78,11 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 	if ( KeyHit( 'T' ) ) lightAnim = !lightAnim;
 	if ( KeyHit( '1' ) ) m_lightingCBufferData.lightState.x = m_lightingCBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
 	if ( KeyHit( '2' ) ) m_lightingCBufferData.lightState.y = m_lightingCBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
+	if ( KeyHit( '3' ) ) m_lightingCBufferData.lightState.w = 0.0f;
+	if ( KeyHit( '4' ) ) m_lightingCBufferData.lightState.w = 1.0f;
+	if ( KeyHit( '5' ) ) m_lightingCBufferData.lightState.w = 2.0f;
+	if ( KeyHit( '6' ) ) m_lightingCBufferData.lightState.w = 3.0f;
+	if ( KeyHit( '7' ) ) m_lightingCBufferData.lightState.w = 4.0f;
 
 	if ( lightAnim )
 	{
