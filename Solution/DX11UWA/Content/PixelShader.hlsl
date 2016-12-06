@@ -59,13 +59,5 @@ float4 main( PixelShaderInput input ) : SV_TARGET
 							 clamp( result0.w + result1.w + result2.w + result.w, 0.0f, 1.0f ) );
 		}
 	}
-	if ( lightState.w == 1.0f ) result = float4( result.x, result.x * 0.95f, result.x * 0.95f, 1.0f );
-	else if ( lightState.w == 2.0f ) result = float4( result.y * 0.95f, result.y, result.y * 0.95f, 1.0f );
-	else if ( lightState.w == 3.0f ) result = float4( result.z * 0.95f, result.z * 0.95f, result.z, 1.0f );
-	else if ( lightState.w == 4.0f )
-	{
-		float color = ( result.x + result.y + result.z ) / 3.0f;
-		result = float4( color, color, color, 1.0f );
-	}
 	return result;
 }

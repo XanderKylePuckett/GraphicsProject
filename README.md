@@ -19,17 +19,3 @@ R - toggle between a file-loaded mesh and a procedurally created cube
 2 - toggle point lights
 
 T - toggle rotation of directional light / toggle motion of point light
-
-P - toggle rendering of ground plane
-
-K - toggle wireframe
-
-3 - All colors
-
-4 - Gray (Red)
-
-5 - Gray (Green)
-
-6 - Gray (Blur)
-
-7 - Gray (All)
