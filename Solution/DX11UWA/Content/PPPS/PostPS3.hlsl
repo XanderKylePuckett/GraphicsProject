@@ -16,5 +16,5 @@ float4 main( PixelShaderInput input ) : SV_TARGET
 	float r = 1.0f - inColor.x;
 	float g = 1.0f - inColor.y;
 	float b = 1.0f - inColor.z;
-	return float4( r, g, b, 1.0f );
+	return float4( g, b, r, 1.0f );
 }
