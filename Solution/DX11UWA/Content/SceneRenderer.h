@@ -26,9 +26,9 @@ namespace DX11UWA
 	private:
 		struct IndexTriangle
 		{
-			unsigned int pos[ 3 ];
-			unsigned int uv[ 3 ];
-			unsigned int norm[ 3 ];
+			unsigned int position[ 3 ];
+			unsigned int texcoord[ 3 ];
+			unsigned int normal[ 3 ];
 		};
 		void UpdateLights( DX::StepTimer const& );
 		void AnimateMesh( DX::StepTimer const& );
@@ -59,10 +59,10 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_postPS[ 4 ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingCBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingBuffer;
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
-		LightingConstantBuffer	m_lightingCBufferData;
+		LightingBuffer	m_lightingBufferData;
 		uint32	m_indexCount;
 
 		ID3D11Texture2D* m_talonTexture;

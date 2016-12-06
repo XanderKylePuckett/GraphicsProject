@@ -10,7 +10,7 @@ namespace DX11UWA
 		DirectX::XMFLOAT4X4 projection;
 	};
 
-	struct LightingConstantBuffer
+	struct LightingBuffer
 	{
 		DirectX::XMFLOAT4 lightState;
 		DirectX::XMFLOAT4 dLightDirection;
@@ -24,8 +24,8 @@ namespace DX11UWA
 
 	struct Vertex
 	{
-		DirectX::XMFLOAT4 pos;
-		DirectX::XMFLOAT4 uv;
+		DirectX::XMFLOAT4 position;
+		DirectX::XMFLOAT4 texcoord;
 		DirectX::XMFLOAT4 normal;
 	};
 }

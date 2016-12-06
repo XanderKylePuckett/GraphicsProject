@@ -97,7 +97,6 @@ bool DX11UWAMain::Render( void )
 	// Render the scene objects.
 	// TODO: Replace this with your app's content rendering functions.
 	bool x = m_sceneRenderer->Render();
-	m_fpsTextRenderer->Render();
 
 	ID3D11RenderTargetView *const targets[ 1u ] = { m_deviceResources->GetBackBufferRenderTargetView() };
 	context->OMSetRenderTargets( 1u, targets, m_deviceResources->GetDepthStencilView() );
@@ -105,6 +104,7 @@ bool DX11UWAMain::Render( void )
 	context->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
 
 	if ( x ) m_sceneRenderer->Draw( drawSurface );
+	m_fpsTextRenderer->Render();
 
 	rtv->Release();
 	drawSurface->Release();

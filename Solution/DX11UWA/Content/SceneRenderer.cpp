@@ -40,12 +40,15 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	ZEROSTRUCT( indexBufferData );
 	CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
 	CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 6u, D3D11_BIND_INDEX_BUFFER );
-	static const Vertex vertices[ 4 ] =
+	static float ttt = 1.0f;
+	if ( m_kbuttons[ 'N' ] ) ttt -= 0.1f;
+	if ( m_kbuttons[ 'M' ] ) ttt += 0.1f;
+	Vertex vertices[ 4 ] =
 	{
 		{ DirectX::XMFLOAT4( -1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( ttt, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( ttt, ttt, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, ttt, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
 	};
 	static const unsigned int indices[ 6 ] = { 0u, 1u, 2u, 0u, 2u, 3u };
 	vertexBufferData.pSysMem = vertices;
@@ -132,14 +135,14 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	m_prevMousePos = nullptr;
 	memset( &m_camera, 0, sizeof( DirectX::XMFLOAT4X4 ) );
 
-	m_lightingCBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
-	m_lightingCBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
-	m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
-	m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
-	m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
-	m_lightingCBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 10.0f );
-	m_lightingCBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 10.0f );
+	m_lightingBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
+	m_lightingBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
+	m_lightingBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
+	m_lightingBufferData.pLightPos1 = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingBufferData.pLightPos2 = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
+	m_lightingBufferData.pLightColorRadius0 = DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 10.0f );
+	m_lightingBufferData.pLightColorRadius1 = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 10.0f );
+	m_lightingBufferData.pLightColorRadius2 = DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 10.0f );
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -190,8 +193,8 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 {
 	static bool lightAnim = true;
 	if ( KeyHit( 'T' ) ) lightAnim = !lightAnim;
-	if ( KeyHit( '1' ) ) m_lightingCBufferData.lightState.x = m_lightingCBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
-	if ( KeyHit( '2' ) ) m_lightingCBufferData.lightState.y = m_lightingCBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
+	if ( KeyHit( '1' ) ) m_lightingBufferData.lightState.x = m_lightingBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
+	if ( KeyHit( '2' ) ) m_lightingBufferData.lightState.y = m_lightingBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
 
 	if ( lightAnim )
 	{
@@ -202,17 +205,17 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 		DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
 		static const float pLightDist = 2.0f;
 		static const float sq3div2 = 0.8660254f;
-		m_lightingCBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, pLightDist, 1.0f );
-		m_lightingCBufferData.pLightPos1 = DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
-		m_lightingCBufferData.pLightPos2 = DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
-		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos0, DirectX::XMVector3Transform(
-			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos0 ), m ) );
-		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos1, DirectX::XMVector3Transform(
-			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos1 ), m ) );
-		DirectX::XMStoreFloat4( &m_lightingCBufferData.pLightPos2, DirectX::XMVector3Transform(
-			DirectX::XMLoadFloat4( &m_lightingCBufferData.pLightPos2 ), m ) );
+		m_lightingBufferData.pLightPos0 = DirectX::XMFLOAT4( 0.0f, -0.5f, pLightDist, 1.0f );
+		m_lightingBufferData.pLightPos1 = DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
+		m_lightingBufferData.pLightPos2 = DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
+		DirectX::XMStoreFloat4( &m_lightingBufferData.pLightPos0, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingBufferData.pLightPos0 ), m ) );
+		DirectX::XMStoreFloat4( &m_lightingBufferData.pLightPos1, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingBufferData.pLightPos1 ), m ) );
+		DirectX::XMStoreFloat4( &m_lightingBufferData.pLightPos2, DirectX::XMVector3Transform(
+			DirectX::XMLoadFloat4( &m_lightingBufferData.pLightPos2 ), m ) );
 		v = DirectX::XMVector3Transform( v, m );
-		DirectX::XMStoreFloat4( &m_lightingCBufferData.dLightDirection, v );
+		DirectX::XMStoreFloat4( &m_lightingBufferData.dLightDirection, v );
 	}
 }
 
@@ -462,8 +465,8 @@ bool SceneRenderer::Render( void )
 
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
 	context->PSSetShaderResources( 0u, 1u, &m_talonTexSrv );
-	context->UpdateSubresource1( m_lightingCBuffer.Get(), 0u, nullptr, &m_lightingCBufferData, 0u, 0u, 0u );
-	context->PSSetConstantBuffers1( 0u, 1u, m_lightingCBuffer.GetAddressOf(), nullptr, nullptr );
+	context->UpdateSubresource1( m_lightingBuffer.Get(), 0u, nullptr, &m_lightingBufferData, 0u, 0u, 0u );
+	context->PSSetConstantBuffers1( 0u, 1u, m_lightingBuffer.GetAddressOf(), nullptr, nullptr );
 
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 
@@ -474,11 +477,11 @@ bool SceneRenderer::Render( void )
 bool operator==( const Vertex& lhs, const Vertex& rhs )
 {
 	return
-		lhs.pos.x == rhs.pos.x &&
-		lhs.pos.y == rhs.pos.y &&
-		lhs.pos.z == rhs.pos.z &&
-		lhs.uv.x == rhs.uv.x &&
-		lhs.uv.y == rhs.uv.y &&
+		lhs.position.x == rhs.position.x &&
+		lhs.position.y == rhs.position.y &&
+		lhs.position.z == rhs.position.z &&
+		lhs.texcoord.x == rhs.texcoord.x &&
+		lhs.texcoord.y == rhs.texcoord.y &&
 		lhs.normal.x == rhs.normal.x &&
 		lhs.normal.y == rhs.normal.y &&
 		lhs.normal.z == rhs.normal.z;
@@ -486,7 +489,7 @@ bool operator==( const Vertex& lhs, const Vertex& rhs )
 void SceneRenderer::ObjMesh_ToBuffer( Vertex*& outVertices, unsigned int*& outIndices,
 									  unsigned int& outNumVertices, unsigned int& outNumIndices,
 									  const std::vector<DirectX::XMFLOAT3>& positions,
-									  const std::vector<DirectX::XMFLOAT2>& uvs,
+									  const std::vector<DirectX::XMFLOAT2>& texcoords,
 									  const std::vector<DirectX::XMFLOAT3>& normals,
 									  const std::vector<SceneRenderer::IndexTriangle>& triangles )
 {
@@ -499,16 +502,16 @@ void SceneRenderer::ObjMesh_ToBuffer( Vertex*& outVertices, unsigned int*& outIn
 		DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f )
 	};
 	unsigned int i;
-	for ( const IndexTriangle& triangle : triangles ) for ( int v = 0; v < 3; ++v )
+	for ( const IndexTriangle& triangle : triangles ) for ( int triVertIdx = 0; triVertIdx < 3; ++triVertIdx )
 	{
-		tempVert.pos.x = positions[ triangle.pos[ v ] - 1u ].x;
-		tempVert.pos.y = positions[ triangle.pos[ v ] - 1u ].y;
-		tempVert.pos.z = positions[ triangle.pos[ v ] - 1u ].z;
-		tempVert.uv.x = uvs[ triangle.uv[ v ] - 1u ].x;
-		tempVert.uv.y = uvs[ triangle.uv[ v ] - 1u ].y;
-		tempVert.normal.x = normals[ triangle.norm[ v ] - 1u ].x;
-		tempVert.normal.y = normals[ triangle.norm[ v ] - 1u ].y;
-		tempVert.normal.z = normals[ triangle.norm[ v ] - 1u ].z;
+		tempVert.position.x = positions[ triangle.position[ triVertIdx ] - 1u ].x;
+		tempVert.position.y = positions[ triangle.position[ triVertIdx ] - 1u ].y;
+		tempVert.position.z = positions[ triangle.position[ triVertIdx ] - 1u ].z;
+		tempVert.texcoord.x = texcoords[ triangle.texcoord[ triVertIdx ] - 1u ].x;
+		tempVert.texcoord.y = texcoords[ triangle.texcoord[ triVertIdx ] - 1u ].y;
+		tempVert.normal.x = normals[ triangle.normal[ triVertIdx ] - 1u ].x;
+		tempVert.normal.y = normals[ triangle.normal[ triVertIdx ] - 1u ].y;
+		tempVert.normal.z = normals[ triangle.normal[ triVertIdx ] - 1u ].z;
 		for ( i = 0u; i < vertices.size(); ++i )
 			if ( vertices[ i ] == tempVert )
 				break;
@@ -541,7 +544,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		IndexTriangle tempTriangle;
 		ZEROSTRUCT( tempTriangle );
 		std::vector<DirectX::XMFLOAT3> positions;
-		std::vector<DirectX::XMFLOAT2> uvs;
+		std::vector<DirectX::XMFLOAT2> texcoords;
 		std::vector<DirectX::XMFLOAT3> normals;
 		std::vector<IndexTriangle> triangles;
 		char temp;
@@ -562,7 +565,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 				{
 					file >> tempf2.x >> tempf2.y;
 					tempf2.y = 1.0f - tempf2.y;
-					uvs.push_back( tempf2 );
+					texcoords.push_back( tempf2 );
 				}
 				else if ( 'n' == temp )
 				{
@@ -575,9 +578,9 @@ void SceneRenderer::ObjMesh_LoadMesh(
 				file.get( temp );
 				if ( ' ' == temp )
 				{
-					file >> tempTriangle.pos[ 0 ] >> temp >> tempTriangle.uv[ 0 ] >> temp >> tempTriangle.norm[ 0 ];
-					file >> tempTriangle.pos[ 1 ] >> temp >> tempTriangle.uv[ 1 ] >> temp >> tempTriangle.norm[ 1 ];
-					file >> tempTriangle.pos[ 2 ] >> temp >> tempTriangle.uv[ 2 ] >> temp >> tempTriangle.norm[ 2 ];
+					file >> tempTriangle.position[ 0 ] >> temp >> tempTriangle.texcoord[ 0 ] >> temp >> tempTriangle.normal[ 0 ];
+					file >> tempTriangle.position[ 1 ] >> temp >> tempTriangle.texcoord[ 1 ] >> temp >> tempTriangle.normal[ 1 ];
+					file >> tempTriangle.position[ 2 ] >> temp >> tempTriangle.texcoord[ 2 ] >> temp >> tempTriangle.normal[ 2 ];
 					triangles.push_back( tempTriangle );
 				}
 			}
@@ -587,7 +590,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 		file.close();
 		ObjMesh_ToBuffer( outVertices, outIndices,
 						  outNumVertices, outNumIndices,
-						  positions, uvs, normals, triangles );
+						  positions, texcoords, normals, triangles );
 	}
 	else
 	{
@@ -640,43 +643,43 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
-	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
-	auto loadSkyPSTask = DX::ReadDataAsync( L"PixelShaderSky.cso" );
-	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
-	auto loadPostPS0Task = DX::ReadDataAsync( L"PostPS0.cso" );
-	auto loadPostPS1Task = DX::ReadDataAsync( L"PostPS1.cso" );
-	auto loadPostPS2Task = DX::ReadDataAsync( L"PostPS2.cso" );
-	auto loadPostPS3Task = DX::ReadDataAsync( L"PostPS3.cso" );
-	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
+	auto loadPS = DX::ReadDataAsync( L"PixelShader.cso" );
+	auto loadSkyPS = DX::ReadDataAsync( L"PixelShaderSky.cso" );
+	auto loadVS = DX::ReadDataAsync( L"VertexShader.cso" );
+	auto loadPPPS0 = DX::ReadDataAsync( L"PostPS0.cso" );
+	auto loadPPPS1 = DX::ReadDataAsync( L"PostPS1.cso" );
+	auto loadPPPS2 = DX::ReadDataAsync( L"PostPS2.cso" );
+	auto loadPPPS3 = DX::ReadDataAsync( L"PostPS3.cso" );
+	auto createPS = loadPS.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_pixelShader ) );
 
-		CD3D11_BUFFER_DESC lightingCBufferDesc( sizeof( LightingConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &lightingCBufferDesc, nullptr, &m_lightingCBuffer ) );
+		CD3D11_BUFFER_DESC lightingBufferDesc( sizeof( LightingBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &lightingBufferDesc, nullptr, &m_lightingBuffer ) );
 	} );
-	auto createSkyPSTask = loadSkyPSTask.then( [ this ]( const std::vector<byte>& fileData )
+	auto createSkyPS = loadSkyPS.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_skyPixelShader ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_skyPixelShader ) );
 	} );
-	auto createPostPS0Task = loadPostPS0Task.then( [ this ]( const std::vector<byte>& fileData )
+	auto createPPPS0 = loadPPPS0.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 0 ] ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 0 ] ) );
 	} );
-	auto createPostPS1Task = loadPostPS1Task.then( [ this ]( const std::vector<byte>& fileData )
+	auto createPPPS1 = loadPPPS1.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 1 ] ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 1 ] ) );
 	} );
-	auto createPostPS2Task = loadPostPS2Task.then( [ this ]( const std::vector<byte>& fileData )
+	auto createPPPS2 = loadPPPS2.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 2 ] ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 2 ] ) );
 	} );
-	auto createPostPS3Task = loadPostPS3Task.then( [ this ]( const std::vector<byte>& fileData )
+	auto createPPPS3 = loadPPPS3.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 3 ] ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 3 ] ) );
 	} );
-	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
+	auto createVS = loadVS.then( [ this ]( const std::vector<byte>& fData )
 	{
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fileData[ 0 ], fileData.size(), nullptr, &m_vertexShader ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_vertexShader ) );
 
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[ ] =
 		{
@@ -685,12 +688,12 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			{ "NORMAL", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
 		};
 
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fileData[ 0 ], fileData.size(), &m_inputLayout ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fData[ 0 ], fData.size(), &m_inputLayout ) );
 
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-	auto createTextureTask = ( createPSTask && createPostPS0Task ).then( [ this ]()
+	auto createTexture = ( createPS && createPPPS0 ).then( [ this ]()
 	{
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
 		ID3D11SamplerState* samplerState;
@@ -760,11 +763,11 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
 		samplerState->Release();
 	} );
-	auto createSkyTextureTask = createSkyPSTask.then( [ this ]()
+	auto createSkyTexture = createSkyPS.then( [ this ]()
 	{
 		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&m_skyTexture, &m_skySrv );
 	} );
-	auto createMeshTask = createVSTask.then( [ this ]()
+	auto createMesh = createVS.then( [ this ]()
 	{
 		Vertex* vertices = nullptr;
 		unsigned int* indices = nullptr;
@@ -788,7 +791,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	auto createSkyMeshTask = createMeshTask.then( [ this ]()
+	auto createSkyMesh = createMesh.then( [ this ]()
 	{
 		static const Vertex vertices[ 8u ] =
 		{
@@ -823,7 +826,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createSkyMeshTask && createTextureTask && createSkyTextureTask && createPostPS1Task && createPostPS2Task && createPostPS3Task ).then( [ this ]()
+	( createSkyMesh && createTexture && createSkyTexture && createPPPS1 && createPPPS2 && createPPPS3 ).then( [ this ]()
 	{
 
 	} ).then( [ this ]() { m_loadingComplete = true; } );
@@ -845,7 +848,7 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_skyVertexBuffer.Reset();
 	m_indexBuffer.Reset();
 	m_skyIndexBuffer.Reset();
-	m_lightingCBuffer.Reset();
+	m_lightingBuffer.Reset();
 	m_skyTexture->Release();
 	m_skySrv->Release();
 	m_talonTexture->Release();
