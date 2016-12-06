@@ -82,18 +82,48 @@ bool DX11UWAMain::Render( void )
 	context->RSSetViewports( 1, &viewport );
 
 	// Reset render targets to the screen.
-	ID3D11RenderTargetView *const targets[ 1 ] = { m_deviceResources->GetBackBufferRenderTargetView() };
-	context->OMSetRenderTargets( 1, targets, m_deviceResources->GetDepthStencilView() );
+	ID3D11Texture2D* drawSurface;
+	ID3D11RenderTargetView* rtv;
+	D3D11_TEXTURE2D_DESC drawSurfaceDesc;
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+	ZEROSTRUCT( drawSurfaceDesc );
+	ZEROSTRUCT( rtvDesc );
+	drawSurfaceDesc.Width = ( UINT )m_deviceResources->GetOutputSize().Width;
+	drawSurfaceDesc.Height = ( UINT )m_deviceResources->GetOutputSize().Height;
+	drawSurfaceDesc.MipLevels = 1u;
+	drawSurfaceDesc.ArraySize = 1u;
+	drawSurfaceDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	drawSurfaceDesc.SampleDesc.Count = 1u;
+	drawSurfaceDesc.SampleDesc.Quality = 0u;
+	drawSurfaceDesc.Usage = D3D11_USAGE_DEFAULT;
+	drawSurfaceDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	drawSurfaceDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+	drawSurfaceDesc.MiscFlags = 0u;
+	rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0u;
+	m_deviceResources->GetD3DDevice()->CreateTexture2D( &drawSurfaceDesc, nullptr, &drawSurface );
+	m_deviceResources->GetD3DDevice()->CreateRenderTargetView( drawSurface, &rtvDesc, &rtv );
+	context->OMSetRenderTargets( 1u, &rtv, m_deviceResources->GetDepthStencilView() );
 
 	// Clear the back buffer and depth stencil view.
-	context->ClearRenderTargetView( m_deviceResources->GetBackBufferRenderTargetView(), DirectX::Colors::CornflowerBlue );
-	context->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0 );
+	context->ClearRenderTargetView( rtv, DirectX::Colors::CornflowerBlue );
+	context->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
 
 	// Render the scene objects.
 	// TODO: Replace this with your app's content rendering functions.
-	m_sceneRenderer->Render();
+	bool x = m_sceneRenderer->Render();
 	m_fpsTextRenderer->Render();
 
+	ID3D11RenderTargetView *const targets[ 1u ] = { m_deviceResources->GetBackBufferRenderTargetView() };
+	context->OMSetRenderTargets( 1u, targets, m_deviceResources->GetDepthStencilView() );
+	context->ClearRenderTargetView( m_deviceResources->GetBackBufferRenderTargetView(), DirectX::Colors::CornflowerBlue );
+	context->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
+
+	if ( x ) m_sceneRenderer->Draw( drawSurface );
+
+	rtv->Release();
+	drawSurface->Release();
 	return true;
 }
 

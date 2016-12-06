@@ -7,6 +7,89 @@
 using namespace DX11UWA;
 bool renderCube = true;
 
+void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
+{
+	if ( !m_loadingComplete ) return;
+
+	ID3D11RasterizerState* rsState;
+	D3D11_RASTERIZER_DESC rsDesc;
+	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
+	rsState->GetDesc( &rsDesc );
+	rsState->Release();
+	D3D11_FILL_MODE currMode = rsDesc.FillMode;
+	if ( D3D11_FILL_SOLID != currMode )
+	{
+		rsDesc.FillMode = D3D11_FILL_SOLID;
+		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
+		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+		rsState->Release();
+	}
+
+	ID3D11Buffer* vertexBuffer;
+	ID3D11Buffer* indexBuffer;
+	ID3D11Buffer* constantBuffer;
+	ID3D11ShaderResourceView* surfaceSrv;
+	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
+	ID3D11Device3* const device = m_deviceResources->GetD3DDevice();
+	ModelViewProjectionConstantBuffer mvpCbufferData;
+	UINT stride = sizeof( Vertex );
+	UINT offset = 0u;
+	CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+	D3D11_SUBRESOURCE_DATA vertexBufferData;
+	D3D11_SUBRESOURCE_DATA indexBufferData;
+	ZEROSTRUCT( vertexBufferData );
+	ZEROSTRUCT( indexBufferData );
+	CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
+	CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 6u, D3D11_BIND_INDEX_BUFFER );
+	static const Vertex vertices[ 4 ] =
+	{
+		{ DirectX::XMFLOAT4( -1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		{ DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+	};
+	static const unsigned int indices[ 6 ] = { 0u, 1u, 2u, 0u, 2u, 3u };
+	vertexBufferData.pSysMem = vertices;
+	indexBufferData.pSysMem = indices;
+	XMStoreFloat4x4( &mvpCbufferData.model, DirectX::XMMatrixIdentity() );
+	XMStoreFloat4x4( &mvpCbufferData.projection, DirectX::XMMatrixIdentity() );
+	XMStoreFloat4x4( &mvpCbufferData.view, DirectX::XMMatrixIdentity() );
+
+	device->CreateBuffer( &constantBufferDesc, nullptr, &constantBuffer );
+	device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &vertexBuffer );
+	device->CreateBuffer( &indexBufferDesc, &indexBufferData, &indexBuffer );
+
+	context->UpdateSubresource1( constantBuffer, 0u, nullptr, &mvpCbufferData, 0u, 0u, 0u );
+	context->VSSetConstantBuffers1( 0u, 1u, &constantBuffer, nullptr, nullptr );
+	context->IASetVertexBuffers( 0u, 1u, &vertexBuffer, &stride, &offset );
+	context->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0u );
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZEROSTRUCT( srvDesc );
+	srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1u;
+	srvDesc.Texture2D.MostDetailedMip = 0u;
+
+	device->CreateShaderResourceView( surfaceTexture, &srvDesc, &surfaceSrv );
+	context->PSSetShader( m_postPS[ m_currPPPS ].Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &surfaceSrv );
+
+	context->DrawIndexed( 6u, 0u, 0 );
+
+	vertexBuffer->Release();
+	indexBuffer->Release();
+	constantBuffer->Release();
+	surfaceSrv->Release();
+
+	if ( D3D11_FILL_SOLID != currMode )
+	{
+		rsDesc.FillMode = currMode;
+		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
+		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+		rsState->Release();
+	}
+}
+
 bool SceneRenderer::KeyHit( char key )
 {
 	static bool keys[ 256 ] = { false };
@@ -39,9 +122,10 @@ void SceneRenderer::ToggleWireframe( void )
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
 	drawPlane( true ),
-	m_degreesPerSecond( 45 ),
-	m_indexCount( 0 ),
-	m_deviceResources( deviceResources )
+	m_degreesPerSecond( 45.0f ),
+	m_indexCount( 0u ),
+	m_deviceResources( deviceResources ),
+	m_currPPPS( 0u )
 {
 	memset( m_kbuttons, 0, sizeof( m_kbuttons ) );
 	m_currMousePos = nullptr;
@@ -139,6 +223,10 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	UpdateLights( timer );
 
 	if ( m_loadingComplete ) if ( KeyHit( 'K' ) ) ToggleWireframe();
+	if ( KeyHit( '4' ) ) m_currPPPS = 0u;
+	if ( KeyHit( '5' ) ) m_currPPPS = 1u;
+	if ( KeyHit( '6' ) ) m_currPPPS = 2u;
+	if ( KeyHit( '7' ) ) m_currPPPS = 3u;
 
 // Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
@@ -313,9 +401,9 @@ void SceneRenderer::DrawPlane( void )
 }
 
 // Renders one frame using the vertex and pixel shaders.
-void SceneRenderer::Render( void )
+bool SceneRenderer::Render( void )
 {
-	if ( !m_loadingComplete ) return;
+	if ( !m_loadingComplete ) return false;
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
@@ -382,6 +470,7 @@ void SceneRenderer::Render( void )
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 
 	if ( drawPlane ) DrawPlane();
+	return true;
 }
 
 bool operator==( const Vertex& lhs, const Vertex& rhs )
@@ -557,6 +646,10 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	auto loadPSTask = DX::ReadDataAsync( L"PixelShader.cso" );
 	auto loadSkyPSTask = DX::ReadDataAsync( L"PixelShaderSky.cso" );
 	auto loadVSTask = DX::ReadDataAsync( L"VertexShader.cso" );
+	auto loadPostPS0Task = DX::ReadDataAsync( L"PostPS0.cso" );
+	auto loadPostPS1Task = DX::ReadDataAsync( L"PostPS1.cso" );
+	auto loadPostPS2Task = DX::ReadDataAsync( L"PostPS2.cso" );
+	auto loadPostPS3Task = DX::ReadDataAsync( L"PostPS3.cso" );
 	auto createPSTask = loadPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_pixelShader ) );
@@ -567,6 +660,22 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	auto createSkyPSTask = loadSkyPSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_skyPixelShader ) );
+	} );
+	auto createPostPS0Task = loadPostPS0Task.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 0 ] ) );
+	} );
+	auto createPostPS1Task = loadPostPS1Task.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 1 ] ) );
+	} );
+	auto createPostPS2Task = loadPostPS2Task.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 2 ] ) );
+	} );
+	auto createPostPS3Task = loadPostPS3Task.then( [ this ]( const std::vector<byte>& fileData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fileData[ 0 ], fileData.size(), nullptr, &m_postPS[ 3 ] ) );
 	} );
 	auto createVSTask = loadVSTask.then( [ this ]( const std::vector<byte>& fileData )
 	{
@@ -584,7 +693,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-	auto createTextureTask = createPSTask.then( [ this ]()
+	auto createTextureTask = ( createPSTask && createPostPS0Task ).then( [ this ]()
 	{
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
 		ID3D11SamplerState* samplerState;
@@ -717,7 +826,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createSkyMeshTask && createTextureTask && createSkyTextureTask ).then( [ this ]()
+	( createSkyMeshTask && createTextureTask && createSkyTextureTask && createPostPS1Task && createPostPS2Task && createPostPS3Task ).then( [ this ]()
 	{
 
 	} ).then( [ this ]() { m_loadingComplete = true; } );
@@ -730,6 +839,10 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
 	m_skyPixelShader.Reset();
+	m_postPS[ 0 ].Reset();
+	m_postPS[ 1 ].Reset();
+	m_postPS[ 2 ].Reset();
+	m_postPS[ 3 ].Reset();
 	m_constantBuffer.Reset();
 	m_vertexBuffer.Reset();
 	m_skyVertexBuffer.Reset();

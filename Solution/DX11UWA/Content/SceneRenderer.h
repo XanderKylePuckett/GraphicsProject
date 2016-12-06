@@ -16,7 +16,8 @@ namespace DX11UWA
 		void CreateWindowSizeDependentResources( void );
 		void ReleaseDeviceDependentResources( void );
 		void Update( DX::StepTimer const& timer );
-		void Render( void );
+		bool Render( void );
+		void Draw( ID3D11Texture2D*& );
 
 		// Helper functions for keyboard and mouse input
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
@@ -56,6 +57,7 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyPixelShader;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_postPS[ 4 ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingCBuffer;
 
@@ -72,6 +74,7 @@ namespace DX11UWA
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
 		bool drawPlane;
+		unsigned int m_currPPPS;
 
 		// Data members for keyboard and mouse input
 		char	m_kbuttons[ 256 ];

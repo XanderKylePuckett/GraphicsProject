@@ -19,3 +19,13 @@ R - toggle between a file-loaded mesh and a procedurally created cube
 2 - toggle point lights
 
 T - toggle rotation of directional light / toggle motion of point light
+
+Post Process Pixel Shaders:
+
+4 - None
+
+5 - Shader 1
+
+6 - Shader 2
+
+7 - Shader 3
