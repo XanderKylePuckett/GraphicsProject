@@ -17,7 +17,7 @@ namespace DX11UWA
 		void ReleaseDeviceDependentResources( void );
 		void Update( DX::StepTimer const& timer );
 		bool Render( void );
-		void Draw( ID3D11Texture2D*& );
+		void Draw( ID3D11Texture2D*& surface );
 
 		// Helper functions for keyboard and mouse input
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
@@ -26,13 +26,13 @@ namespace DX11UWA
 	private:
 		struct IndexTriangle
 		{
-			unsigned int p[ 3 ];
-			unsigned int t[ 3 ];
-			unsigned int n[ 3 ];
+			unsigned int pos[ 3 ];
+			unsigned int uv[ 3 ];
+			unsigned int norm[ 3 ];
 		};
-		void UpdateLights( DX::StepTimer const& timer );
-		void AnimateMesh( DX::StepTimer const& timer );
-		void UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd );
+		void UpdateLights( DX::StepTimer const& );
+		void AnimateMesh( DX::StepTimer const& );
+		void UpdateCamera( DX::StepTimer const&, float const, float const );
 		static void ObjMesh_ToBuffer( Vertex*&, unsigned int*&, unsigned int&, unsigned int&,
 									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<DirectX::XMFLOAT2>&,
 									  const std::vector<DirectX::XMFLOAT3>&, const std::vector<IndexTriangle>& );
@@ -42,7 +42,7 @@ namespace DX11UWA
 		void DrawPlane( void );
 		void ToggleWireframe( void );
 
-		bool SceneRenderer::KeyHit( char key );
+		bool SceneRenderer::KeyHit( char );
 
 	private:
 		// Cached pointer to device resources.
@@ -65,16 +65,17 @@ namespace DX11UWA
 		LightingConstantBuffer	m_lightingCBufferData;
 		uint32	m_indexCount;
 
-		ID3D11Texture2D* texture;
-		ID3D11ShaderResourceView* srv;
-		ID3D11Texture2D* skyTexture;
-		ID3D11ShaderResourceView* skySrv;
+		ID3D11Texture2D* m_talonTexture;
+		ID3D11ShaderResourceView* m_talonTexSrv;
+		ID3D11Texture2D* m_skyTexture;
+		ID3D11ShaderResourceView* m_skySrv;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
 		float	m_degreesPerSecond;
-		bool drawPlane;
+		bool m_drawPlane;
 		unsigned int m_currPPPS;
+		bool m_renderCube;
 
 		// Data members for keyboard and mouse input
 		char	m_kbuttons[ 256 ];

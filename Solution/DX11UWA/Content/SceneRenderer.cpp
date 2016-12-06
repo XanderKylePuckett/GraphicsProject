@@ -5,7 +5,6 @@
 #include "Assets\\star.h"
 #include <fstream>
 using namespace DX11UWA;
-bool renderCube = true;
 
 void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 {
@@ -16,8 +15,8 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
 	rsState->GetDesc( &rsDesc );
 	rsState->Release();
-	D3D11_FILL_MODE currMode = rsDesc.FillMode;
-	if ( D3D11_FILL_SOLID != currMode )
+	D3D11_FILL_MODE currFillMode = rsDesc.FillMode;
+	if ( D3D11_FILL_SOLID != currFillMode )
 	{
 		rsDesc.FillMode = D3D11_FILL_SOLID;
 		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
@@ -81,9 +80,9 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	constantBuffer->Release();
 	surfaceSrv->Release();
 
-	if ( D3D11_FILL_SOLID != currMode )
+	if ( D3D11_FILL_SOLID != currFillMode )
 	{
-		rsDesc.FillMode = currMode;
+		rsDesc.FillMode = currFillMode;
 		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
 		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
 		rsState->Release();
@@ -121,11 +120,12 @@ void SceneRenderer::ToggleWireframe( void )
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& deviceResources ) :
 	m_loadingComplete( false ),
-	drawPlane( true ),
+	m_drawPlane( true ),
 	m_degreesPerSecond( 45.0f ),
 	m_indexCount( 0u ),
 	m_deviceResources( deviceResources ),
-	m_currPPPS( 0u )
+	m_currPPPS( 0u ),
+	m_renderCube( true )
 {
 	memset( m_kbuttons, 0, sizeof( m_kbuttons ) );
 	m_currMousePos = nullptr;
@@ -234,17 +234,17 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	if ( KeyHit( 'R' ) )
 	{
 		ReleaseDeviceDependentResources();
-		renderCube = !renderCube;
+		m_renderCube = !m_renderCube;
 		CreateDeviceDependentResources();
 	}
-	if ( KeyHit( 'P' ) ) drawPlane = !drawPlane;
+	if ( KeyHit( 'P' ) ) m_drawPlane = !m_drawPlane;
 
 #if 1
 	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	static float fov = 70.0f;
-	if ( m_kbuttons[ '8' ] ) fov -= timer.GetElapsedSeconds() * 30.0f;
-	if ( m_kbuttons[ '9' ] ) fov += timer.GetElapsedSeconds() * 30.0f;
+	if ( m_kbuttons[ '8' ] ) fov -= ( float )timer.GetElapsedSeconds() * 30.0f;
+	if ( m_kbuttons[ '9' ] ) fov += ( float )timer.GetElapsedSeconds() * 30.0f;
 	float fovAngleY = DirectX::XMConvertToRadians( fov );
 	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
 	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
@@ -417,7 +417,6 @@ bool SceneRenderer::Render( void )
 
 	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
 
-	//////
 	ID3D11DepthStencilState* dsState;
 	D3D11_DEPTH_STENCIL_DESC dsDesc;
 	ZEROSTRUCT( dsDesc );
@@ -439,7 +438,7 @@ bool SceneRenderer::Render( void )
 	context->OMSetDepthStencilState( dsState, 1u );
 	dsState->Release();
 	context->PSSetShader( m_skyPixelShader.Get(), nullptr, 0u );
-	context->PSSetShaderResources( 0u, 1u, &skySrv );
+	context->PSSetShaderResources( 0u, 1u, &m_skySrv );
 
 	DirectX::XMMATRIX camPosMat = DirectX::XMMatrixTranslation( m_camera._41, m_camera._42, m_camera._43 );
 	DirectX::XMFLOAT4X4 model = m_constantBufferData.model;
@@ -460,16 +459,15 @@ bool SceneRenderer::Render( void )
 	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
 	context->OMSetDepthStencilState( dsState, 1u );
 	dsState->Release();
-	//////
 
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
-	context->PSSetShaderResources( 0u, 1u, &srv );
+	context->PSSetShaderResources( 0u, 1u, &m_talonTexSrv );
 	context->UpdateSubresource1( m_lightingCBuffer.Get(), 0u, nullptr, &m_lightingCBufferData, 0u, 0u, 0u );
 	context->PSSetConstantBuffers1( 0u, 1u, m_lightingCBuffer.GetAddressOf(), nullptr, nullptr );
 
 	context->DrawIndexed( m_indexCount, 0u, 0 );
 
-	if ( drawPlane ) DrawPlane();
+	if ( m_drawPlane ) DrawPlane();
 	return true;
 }
 
@@ -503,14 +501,14 @@ void SceneRenderer::ObjMesh_ToBuffer( Vertex*& outVertices, unsigned int*& outIn
 	unsigned int i;
 	for ( const IndexTriangle& triangle : triangles ) for ( int v = 0; v < 3; ++v )
 	{
-		tempVert.pos.x = positions[ triangle.p[ v ] - 1u ].x;
-		tempVert.pos.y = positions[ triangle.p[ v ] - 1u ].y;
-		tempVert.pos.z = positions[ triangle.p[ v ] - 1u ].z;
-		tempVert.uv.x = uvs[ triangle.t[ v ] - 1u ].x;
-		tempVert.uv.y = uvs[ triangle.t[ v ] - 1u ].y;
-		tempVert.normal.x = normals[ triangle.n[ v ] - 1u ].x;
-		tempVert.normal.y = normals[ triangle.n[ v ] - 1u ].y;
-		tempVert.normal.z = normals[ triangle.n[ v ] - 1u ].z;
+		tempVert.pos.x = positions[ triangle.pos[ v ] - 1u ].x;
+		tempVert.pos.y = positions[ triangle.pos[ v ] - 1u ].y;
+		tempVert.pos.z = positions[ triangle.pos[ v ] - 1u ].z;
+		tempVert.uv.x = uvs[ triangle.uv[ v ] - 1u ].x;
+		tempVert.uv.y = uvs[ triangle.uv[ v ] - 1u ].y;
+		tempVert.normal.x = normals[ triangle.norm[ v ] - 1u ].x;
+		tempVert.normal.y = normals[ triangle.norm[ v ] - 1u ].y;
+		tempVert.normal.z = normals[ triangle.norm[ v ] - 1u ].z;
 		for ( i = 0u; i < vertices.size(); ++i )
 			if ( vertices[ i ] == tempVert )
 				break;
@@ -535,8 +533,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 	unsigned int& outNumIndices )
 {
 	std::ifstream file;
-	if ( !renderCube )
-		file.open( filepath, std::ios_base::in );
+	file.open( filepath, std::ios_base::in );
 	if ( file.is_open() )
 	{
 		DirectX::XMFLOAT2 tempf2( 0.0f, 0.0f );
@@ -578,9 +575,9 @@ void SceneRenderer::ObjMesh_LoadMesh(
 				file.get( temp );
 				if ( ' ' == temp )
 				{
-					file >> tempTriangle.p[ 0 ] >> temp >> tempTriangle.t[ 0 ] >> temp >> tempTriangle.n[ 0 ];
-					file >> tempTriangle.p[ 1 ] >> temp >> tempTriangle.t[ 1 ] >> temp >> tempTriangle.n[ 1 ];
-					file >> tempTriangle.p[ 2 ] >> temp >> tempTriangle.t[ 2 ] >> temp >> tempTriangle.n[ 2 ];
+					file >> tempTriangle.pos[ 0 ] >> temp >> tempTriangle.uv[ 0 ] >> temp >> tempTriangle.norm[ 0 ];
+					file >> tempTriangle.pos[ 1 ] >> temp >> tempTriangle.uv[ 1 ] >> temp >> tempTriangle.norm[ 1 ];
+					file >> tempTriangle.pos[ 2 ] >> temp >> tempTriangle.uv[ 2 ] >> temp >> tempTriangle.norm[ 2 ];
 					triangles.push_back( tempTriangle );
 				}
 			}
@@ -700,7 +697,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		D3D11_SAMPLER_DESC samplerDesc;
 		ZEROSTRUCT( samplerDesc );
 
-		if ( renderCube )
+		if ( m_renderCube )
 		{
 			D3D11_SUBRESOURCE_DATA textureSubresourceData[ star_numlevels ];
 			D3D11_TEXTURE2D_DESC textureDesc;
@@ -736,15 +733,15 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
 				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
 			}
-			dev->CreateTexture2D( &textureDesc, textureSubresourceData, &texture );
+			dev->CreateTexture2D( &textureDesc, textureSubresourceData, &m_talonTexture );
 			delete[ ] pixels;
 			srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MostDetailedMip = 0u;
 			srvDesc.Texture2D.MipLevels = star_numlevels;
-			dev->CreateShaderResourceView( texture, &srvDesc, &srv );
+			dev->CreateShaderResourceView( m_talonTexture, &srvDesc, &m_talonTexSrv );
 		}
-		else CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &texture ), &srv );
+		else CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &m_talonTexture ), &m_talonTexSrv );
 
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -765,7 +762,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createSkyTextureTask = createSkyPSTask.then( [ this ]()
 	{
-		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&skyTexture, &skySrv );
+		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&m_skyTexture, &m_skySrv );
 	} );
 	auto createMeshTask = createVSTask.then( [ this ]()
 	{
@@ -773,7 +770,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		unsigned int* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
-		ObjMesh_LoadMesh( "Assets\\Talon.mobj", vertices, indices, numVertices, numIndices );
+		ObjMesh_LoadMesh( ( m_renderCube ) ? ( "NULL" ) : ( "Assets\\Talon.mobj" ), vertices, indices, numVertices, numIndices );
 
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
@@ -849,8 +846,8 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_indexBuffer.Reset();
 	m_skyIndexBuffer.Reset();
 	m_lightingCBuffer.Reset();
-	skyTexture->Release();
-	skySrv->Release();
-	texture->Release();
-	srv->Release();
+	m_skyTexture->Release();
+	m_skySrv->Release();
+	m_talonTexture->Release();
+	m_talonTexSrv->Release();
 }
