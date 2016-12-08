@@ -33,6 +33,7 @@ namespace DX11UWA
 			unsigned int normal[ 3 ];
 		};
 		void UpdateLights( DX::StepTimer const& );
+		void UpdateRTTScene( DX::StepTimer const& );
 		void AnimateMesh( DX::StepTimer const& );
 		void UpdateCamera( DX::StepTimer const&, float const, float const );
 		static void ObjMesh_ToBuffer( Vertex*&, unsigned int*&, unsigned int&, unsigned int&,
@@ -59,14 +60,18 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_skyVertexShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_rttVertexShader;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_postVertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyPixelShader;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_rttPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_postPS[ 4 ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttConstantBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingBuffer;
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
+		ModelViewProjectionConstantBuffer	m_rttConstantBufferData;
 		LightingBuffer	m_lightingBufferData;
 		uint32	m_talonIndexCount;
 		uint32	m_cubeIndexCount;

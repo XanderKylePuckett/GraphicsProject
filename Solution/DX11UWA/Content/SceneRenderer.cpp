@@ -162,7 +162,7 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	memset( &m_camera, 0, sizeof( DirectX::XMFLOAT4X4 ) );
 
 	m_lightingBufferData.dLightDirection = DirectX::XMFLOAT4( -1.0f, -1.0f, 1.0f, 1.0f );
-	m_lightingBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.0f );
+	m_lightingBufferData.lightState = DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f );
 	m_lightingBufferData.pLightPos[ 0 ] = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
 	m_lightingBufferData.pLightPos[ 1 ] = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
 	m_lightingBufferData.pLightPos[ 2 ] = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
@@ -172,6 +172,19 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+
+	static const float fovAngleY = DirectX::XMConvertToRadians( 70.0f );
+	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, 1.0f, 0.01f, 100.0f );
+	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
+	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
+	XMStoreFloat4x4( &m_rttConstantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
+	XMStoreFloat4x4( &m_rttConstantBufferData.model, DirectX::XMMatrixIdentity() );
+	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
+	static const DirectX::XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
+	DirectX::XMFLOAT4X4 rttCam;
+	XMStoreFloat4x4( &rttCam, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
+	XMStoreFloat4x4( &m_rttConstantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
 
 	ID3D11RasterizerState* rsState;
 	D3D11_RASTERIZER_DESC rsDesc;
@@ -260,7 +273,6 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	if ( KeyHit( 'R' ) ) m_renderCube = !m_renderCube;
 	if ( KeyHit( 'P' ) ) m_drawPlane = !m_drawPlane;
 
-#if 1
 	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	static float fov = 70.0f;
@@ -271,7 +283,9 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
 	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
 	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
-#endif
+
+	if ( m_loadingComplete )
+		UpdateRTTScene( timer );
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
@@ -421,13 +435,41 @@ void SceneRenderer::DrawPlane( void )
 	planeSrv->Release();
 }
 
+void SceneRenderer::UpdateRTTScene( DX::StepTimer const& timer )
+{
+	float radians = fmodf(
+		( float )timer.GetTotalSeconds() *
+		DirectX::XMConvertToRadians( m_degreesPerSecond ),
+		DirectX::XM_2PI );
+	XMStoreFloat4x4( &m_rttConstantBufferData.model, XMMatrixTranspose( DirectX::XMMatrixRotationZ( radians * -2.0f ) ) );
+}
+
 void SceneRenderer::DrawRTTScene( void )
 {
 	if ( !m_loadingComplete ) return;
 
+	auto context = m_deviceResources->GetD3DDeviceContext();
+
 	m_deviceResources->GetD3DDeviceContext()->OMSetRenderTargets( 1u, &m_rttRtv, m_rttDsv );
 	m_deviceResources->GetD3DDeviceContext()->ClearRenderTargetView( m_rttRtv, DirectX::Colors::White );
 	m_deviceResources->GetD3DDeviceContext()->ClearDepthStencilView( m_rttDsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
+
+	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+	context->IASetInputLayout( m_inputLayout.Get() );
+
+	context->UpdateSubresource1( m_rttConstantBuffer.Get(), 0u, nullptr, &m_rttConstantBufferData, 0u, 0u, 0u );
+	context->VSSetConstantBuffers1( 0u, 1u, m_rttConstantBuffer.GetAddressOf(), nullptr, nullptr );
+
+	context->VSSetShader( m_rttVertexShader.Get(), nullptr, 0u );
+	context->PSSetShader( m_rttPixelShader.Get(), nullptr, 0u );
+
+	UINT stride = sizeof( Vertex );
+	UINT offset = 0u;
+
+	context->IASetVertexBuffers( 0u, 1u, m_cubeVertexBuffer.GetAddressOf(), &stride, &offset );
+	context->IASetIndexBuffer( m_cubeIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
+
+	context->DrawIndexed( m_cubeIndexCount, 0u, 0 );
 }
 
 // Renders one frame using the vertex and pixel shaders.
@@ -441,9 +483,6 @@ bool SceneRenderer::Render( void )
 
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
-
-	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-	context->IASetInputLayout( m_inputLayout.Get() );
 
 	ID3D11DepthStencilState* dsState;
 	D3D11_DEPTH_STENCIL_DESC dsDesc;
@@ -686,6 +725,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	auto loadPPPS1 = DX::ReadDataAsync( L"PostPS1.cso" );
 	auto loadPPPS2 = DX::ReadDataAsync( L"PostPS2.cso" );
 	auto loadPPPS3 = DX::ReadDataAsync( L"PostPS3.cso" );
+	auto loadRttPS = DX::ReadDataAsync( L"PixelShaderRtt.cso" );
+	auto loadRttVS = DX::ReadDataAsync( L"VertexShaderRtt.cso" );
 	auto createPS = loadPS.then( [ this ]( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_pixelShader ) );
@@ -950,7 +991,18 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDevice()->CreateDepthStencilView( m_rttDsTex, &dsvDesc, &m_rttDsv );
 
 	} );
-	createRttTexture.then( [ this ]() { m_loadingComplete = true; } );
+	auto createRttPS = loadRttPS.then( [ this ]( const std::vector<byte>& fData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_rttPixelShader ) );
+	} );
+	auto createRttVS = loadRttVS.then( [ this ]( const std::vector<byte>& fData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_rttVertexShader ) );
+
+		CD3D11_BUFFER_DESC rttConstantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &rttConstantBufferDesc, nullptr, &m_rttConstantBuffer ) );
+	} );
+	( createRttTexture && createRttPS && createRttVS ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -958,15 +1010,18 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_loadingComplete = false;
 	m_vertexShader.Reset();
 	m_skyVertexShader.Reset();
+	m_rttVertexShader.Reset();
 	m_postVertexShader.Reset();
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
 	m_skyPixelShader.Reset();
+	m_rttPixelShader.Reset();
 	m_postPS[ 0 ].Reset();
 	m_postPS[ 1 ].Reset();
 	m_postPS[ 2 ].Reset();
 	m_postPS[ 3 ].Reset();
 	m_constantBuffer.Reset();
+	m_rttConstantBuffer.Reset();
 	m_talonVertexBuffer.Reset();
 	m_talonIndexBuffer.Reset();
 	m_cubeVertexBuffer.Reset();

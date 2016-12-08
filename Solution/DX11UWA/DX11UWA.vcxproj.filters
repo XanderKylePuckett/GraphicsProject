@@ -135,5 +135,11 @@
     <FxCompile Include="Content\Shaders\PPPS\PostPS3.hlsl">
       <Filter>Content\Shaders\PPPS</Filter>
     </FxCompile>
+    <FxCompile Include="Content\Shaders\VertexShaderRtt.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PixelShaderRtt.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
