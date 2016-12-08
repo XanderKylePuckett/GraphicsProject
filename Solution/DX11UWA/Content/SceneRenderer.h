@@ -17,7 +17,9 @@ namespace DX11UWA
 		void ReleaseDeviceDependentResources( void );
 		void Update( DX::StepTimer const& timer );
 		bool Render( void );
-		void Draw( ID3D11Texture2D*& surface );
+		void DrawSurfaceToScreen( ID3D11Texture2D*& surface );
+		void CreateDrawSurface( ID3D11Texture2D** );
+		void DrawRTTScene( void );
 
 		// Helper functions for keyboard and mouse input
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
@@ -75,6 +77,11 @@ namespace DX11UWA
 		ID3D11ShaderResourceView* m_cubeTexSrv;
 		ID3D11Texture2D* m_skyTexture;
 		ID3D11ShaderResourceView* m_skySrv;
+		ID3D11Texture2D* m_rttTex;
+		ID3D11Texture2D* m_rttDsTex;
+		ID3D11RenderTargetView* m_rttRtv;
+		ID3D11ShaderResourceView* m_rttSrv;
+		ID3D11DepthStencilView* m_rttDsv;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

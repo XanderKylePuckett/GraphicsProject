@@ -6,13 +6,49 @@
 #include <fstream>
 using namespace DX11UWA;
 
-void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
+void SceneRenderer::CreateDrawSurface( ID3D11Texture2D** pTexture )
+{
+	ID3D11Texture2D*& texture = *pTexture;
+	ID3D11RenderTargetView* rtv;
+	D3D11_TEXTURE2D_DESC drawSurfaceDesc;
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+	ZEROSTRUCT( drawSurfaceDesc );
+	ZEROSTRUCT( rtvDesc );
+	drawSurfaceDesc.Width = ( UINT )m_deviceResources->GetOutputSize().Width;
+	drawSurfaceDesc.Height = ( UINT )m_deviceResources->GetOutputSize().Height;
+	drawSurfaceDesc.MipLevels = 1u;
+	drawSurfaceDesc.ArraySize = 1u;
+	drawSurfaceDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	drawSurfaceDesc.SampleDesc.Count = 1u;
+	drawSurfaceDesc.SampleDesc.Quality = 0u;
+	drawSurfaceDesc.Usage = D3D11_USAGE_DEFAULT;
+	drawSurfaceDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	drawSurfaceDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+	drawSurfaceDesc.MiscFlags = 0u;
+	rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0u;
+	m_deviceResources->GetD3DDevice()->CreateTexture2D( &drawSurfaceDesc, nullptr, &texture );
+	m_deviceResources->GetD3DDevice()->CreateRenderTargetView( texture, &rtvDesc, &rtv );
+	m_deviceResources->GetD3DDeviceContext()->OMSetRenderTargets( 1u, &rtv, m_deviceResources->GetDepthStencilView() );
+	m_deviceResources->GetD3DDeviceContext()->ClearRenderTargetView( rtv, DirectX::Colors::Black );
+	m_deviceResources->GetD3DDeviceContext()->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
+	rtv->Release();
+}
+
+void SceneRenderer::DrawSurfaceToScreen( ID3D11Texture2D*& _texture )
 {
 	if ( !m_loadingComplete ) return;
 
+	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
+	ID3D11RenderTargetView* const backBuffer = m_deviceResources->GetBackBufferRenderTargetView();
+	context->OMSetRenderTargets( 1u, &backBuffer, m_deviceResources->GetDepthStencilView() );
+	context->ClearRenderTargetView( m_deviceResources->GetBackBufferRenderTargetView(), DirectX::Colors::Black );
+	context->ClearDepthStencilView( m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
+
 	ID3D11RasterizerState* rsState;
 	D3D11_RASTERIZER_DESC rsDesc;
-	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
+	context->RSGetState( &rsState );
 	rsState->GetDesc( &rsDesc );
 	rsState->Release();
 	D3D11_FILL_MODE currFillMode = rsDesc.FillMode;
@@ -20,14 +56,13 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	{
 		rsDesc.FillMode = D3D11_FILL_SOLID;
 		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
-		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+		context->RSSetState( rsState );
 		rsState->Release();
 	}
 
 	ID3D11Buffer* vertexBuffer;
 	ID3D11Buffer* indexBuffer;
 	ID3D11ShaderResourceView* surfaceSrv;
-	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
 	ID3D11Device3* const device = m_deviceResources->GetD3DDevice();
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
@@ -63,7 +98,7 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	srvDesc.Texture2D.MipLevels = 1u;
 	srvDesc.Texture2D.MostDetailedMip = 0u;
 
-	device->CreateShaderResourceView( surfaceTexture, &srvDesc, &surfaceSrv );
+	device->CreateShaderResourceView( _texture, &srvDesc, &surfaceSrv );
 	context->VSSetShader( m_postVertexShader.Get(), nullptr, 0u );
 	context->PSSetShader( m_postPS[ m_currPPPS ].Get(), nullptr, 0u );
 	context->PSSetShaderResources( 0u, 1u, &surfaceSrv );
@@ -78,7 +113,7 @@ void SceneRenderer::Draw( ID3D11Texture2D*& surfaceTexture )
 	{
 		rsDesc.FillMode = currFillMode;
 		m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
-		m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
+		context->RSSetState( rsState );
 		rsState->Release();
 	}
 }
@@ -386,6 +421,15 @@ void SceneRenderer::DrawPlane( void )
 	planeSrv->Release();
 }
 
+void SceneRenderer::DrawRTTScene( void )
+{
+	if ( !m_loadingComplete ) return;
+
+	m_deviceResources->GetD3DDeviceContext()->OMSetRenderTargets( 1u, &m_rttRtv, m_rttDsv );
+	m_deviceResources->GetD3DDeviceContext()->ClearRenderTargetView( m_rttRtv, DirectX::Colors::White );
+	m_deviceResources->GetD3DDeviceContext()->ClearDepthStencilView( m_rttDsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
+}
+
 // Renders one frame using the vertex and pixel shaders.
 bool SceneRenderer::Render( void )
 {
@@ -449,7 +493,7 @@ bool SceneRenderer::Render( void )
 	{
 		context->IASetVertexBuffers( 0u, 1u, m_cubeVertexBuffer.GetAddressOf(), &stride, &offset );
 		context->IASetIndexBuffer( m_cubeIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
-		context->PSSetShaderResources( 0u, 1u, &m_cubeTexSrv );
+		context->PSSetShaderResources( 0u, 1u, &m_rttSrv );
 		context->DrawIndexed( m_cubeIndexCount, 0u, 0 );
 	}
 	else
@@ -845,16 +889,68 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createSkyMesh &&
-	  createTextures &&
-	  createPPPS0 &&
-	  createPPPS1 &&
-	  createPPPS2 &&
-	  createPPPS3 &&
-	  createPostVS ).then( [ this ]()
+	auto createRttTexture = ( createSkyMesh && createTextures && createPPPS0 && createPPPS1 && createPPPS2 && createPPPS3 && createPostVS ).then( [ this ]()
 	{
-		m_loadingComplete = true;
+		const UINT texWidth = 512u;
+		const UINT texHeight = 512u;
+
+		D3D11_TEXTURE2D_DESC rttTexDesc;
+		D3D11_TEXTURE2D_DESC dsTexDesc;
+		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+
+		ZEROSTRUCT( rttTexDesc );
+		ZEROSTRUCT( dsTexDesc );
+		ZEROSTRUCT( rtvDesc );
+		ZEROSTRUCT( srvDesc );
+		ZEROSTRUCT( dsvDesc );
+
+		rttTexDesc.Width = texWidth;
+		rttTexDesc.Height = texHeight;
+		rttTexDesc.MipLevels = 1u;
+		rttTexDesc.ArraySize = 1u;
+		rttTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		rttTexDesc.SampleDesc.Count = 1u;
+		rttTexDesc.SampleDesc.Quality = 0u;
+		rttTexDesc.Usage = D3D11_USAGE_DEFAULT;
+		rttTexDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		rttTexDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+		rttTexDesc.MiscFlags = 0u;
+		m_deviceResources->GetD3DDevice()->CreateTexture2D( &rttTexDesc, nullptr, &m_rttTex );
+
+		rtvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice = 0u;
+		m_deviceResources->GetD3DDevice()->CreateRenderTargetView( m_rttTex, &rtvDesc, &m_rttRtv );
+
+		srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1u;
+		srvDesc.Texture2D.MostDetailedMip = 0u;
+		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( m_rttTex, &srvDesc, &m_rttSrv );
+
+		dsTexDesc.Width = texWidth;
+		dsTexDesc.Height = texHeight;
+		dsTexDesc.MipLevels = 1u;
+		dsTexDesc.ArraySize = 1u;
+		dsTexDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsTexDesc.SampleDesc.Count = 1u;
+		dsTexDesc.SampleDesc.Quality = 0u;
+		dsTexDesc.Usage = D3D11_USAGE_DEFAULT;
+		dsTexDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+		dsTexDesc.CPUAccessFlags = 0u;
+		dsTexDesc.MiscFlags = 0u;
+		m_deviceResources->GetD3DDevice()->CreateTexture2D( &dsTexDesc, nullptr, &m_rttDsTex );
+
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Flags = 0u;
+		dsvDesc.Texture2D.MipSlice = 0u;
+		m_deviceResources->GetD3DDevice()->CreateDepthStencilView( m_rttDsTex, &dsvDesc, &m_rttDsv );
+
 	} );
+	createRttTexture.then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -884,4 +980,9 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_talonTexSrv->Release();
 	m_cubeTexture->Release();
 	m_cubeTexSrv->Release();
+	m_rttTex->Release();
+	m_rttDsTex->Release();
+	m_rttRtv->Release();
+	m_rttSrv->Release();
+	m_rttDsv->Release();
 }
