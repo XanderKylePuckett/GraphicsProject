@@ -48,11 +48,12 @@ namespace DX11UWA
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
-		// Direct3D resources for cube geometry.
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonVertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonIndexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeVertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
@@ -63,10 +64,13 @@ namespace DX11UWA
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		LightingBuffer	m_lightingBufferData;
-		uint32	m_indexCount;
+		uint32	m_talonIndexCount;
+		uint32	m_cubeIndexCount;
 
 		ID3D11Texture2D* m_talonTexture;
 		ID3D11ShaderResourceView* m_talonTexSrv;
+		ID3D11Texture2D* m_cubeTexture;
+		ID3D11ShaderResourceView* m_cubeTexSrv;
 		ID3D11Texture2D* m_skyTexture;
 		ID3D11ShaderResourceView* m_skySrv;
 

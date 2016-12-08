@@ -114,7 +114,7 @@ void SceneRenderer::ToggleWireframe( void )
 	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
 	rsState->GetDesc( &rsDesc );
 	rsState->Release();
-	rsDesc.FillMode = ( ( rsDesc.FillMode ) == ( D3D11_FILL_SOLID ) ? ( D3D11_FILL_WIREFRAME ) : ( D3D11_FILL_SOLID ) );
+	rsDesc.FillMode = ( ( ( D3D11_FILL_WIREFRAME ) == ( rsDesc.FillMode ) ) ? ( D3D11_FILL_SOLID ) : ( D3D11_FILL_WIREFRAME ) );
 	m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
 	m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
 	rsState->Release();
@@ -125,7 +125,7 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	m_loadingComplete( false ),
 	m_drawPlane( true ),
 	m_degreesPerSecond( 45.0f ),
-	m_indexCount( 0u ),
+	m_talonIndexCount( 0u ),
 	m_deviceResources( deviceResources ),
 	m_currPPPS( 0u ),
 	m_renderCube( true )
@@ -234,12 +234,7 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 // Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
 
-	if ( KeyHit( 'R' ) )
-	{
-		ReleaseDeviceDependentResources();
-		m_renderCube = !m_renderCube;
-		CreateDeviceDependentResources();
-	}
+	if ( KeyHit( 'R' ) ) m_renderCube = !m_renderCube;
 	if ( KeyHit( 'P' ) ) m_drawPlane = !m_drawPlane;
 
 #if 1
@@ -450,25 +445,32 @@ bool SceneRenderer::Render( void )
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
 	context->IASetVertexBuffers( 0u, 1u, m_skyVertexBuffer.GetAddressOf(), &stride, &offset );
 	context->IASetIndexBuffer( m_skyIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
-
 	context->DrawIndexed( 36u, 0u, 0 );
 
 	m_constantBufferData.model = model;
 	context->UpdateSubresource1( m_constantBuffer.Get(), 0u, nullptr, &m_constantBufferData, 0u, 0u, 0u );
 	context->VSSetConstantBuffers1( 0u, 1u, m_constantBuffer.GetAddressOf(), nullptr, nullptr );
-	context->IASetVertexBuffers( 0u, 1u, m_vertexBuffer.GetAddressOf(), &stride, &offset );
-	context->IASetIndexBuffer( m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 	dsDesc.DepthEnable = TRUE;
 	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
 	context->OMSetDepthStencilState( dsState, 1u );
 	dsState->Release();
-
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
-	context->PSSetShaderResources( 0u, 1u, &m_talonTexSrv );
 	context->UpdateSubresource1( m_lightingBuffer.Get(), 0u, nullptr, &m_lightingBufferData, 0u, 0u, 0u );
 	context->PSSetConstantBuffers1( 0u, 1u, m_lightingBuffer.GetAddressOf(), nullptr, nullptr );
-
-	context->DrawIndexed( m_indexCount, 0u, 0 );
+	if ( m_renderCube )
+	{
+		context->IASetVertexBuffers( 0u, 1u, m_cubeVertexBuffer.GetAddressOf(), &stride, &offset );
+		context->IASetIndexBuffer( m_cubeIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
+		context->PSSetShaderResources( 0u, 1u, &m_cubeTexSrv );
+		context->DrawIndexed( m_cubeIndexCount, 0u, 0 );
+	}
+	else
+	{
+		context->IASetVertexBuffers( 0u, 1u, m_talonVertexBuffer.GetAddressOf(), &stride, &offset );
+		context->IASetIndexBuffer( m_talonIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
+		context->PSSetShaderResources( 0u, 1u, &m_talonTexSrv );
+		context->DrawIndexed( m_talonIndexCount, 0u, 0 );
+	}
 
 	if ( m_drawPlane ) DrawPlane();
 	return true;
@@ -693,58 +695,56 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-	auto createTexture = ( createPS && createPPPS0 ).then( [ this ]()
+	auto createTextures = ( createPS && createPPPS0 ).then( [ this ]()
 	{
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
+
+		D3D11_SUBRESOURCE_DATA cubeTexSubresourceData[ star_numlevels ];
+		D3D11_TEXTURE2D_DESC cubeTextureDesc;
+		D3D11_SHADER_RESOURCE_VIEW_DESC cubeSrvDesc;
+		ZEROSTRUCT( cubeTextureDesc );
+		ZEROSTRUCT( cubeSrvDesc );
+		unsigned int* pixels = new unsigned int[ star_numpixels ];
+		unsigned int i = 0u;
+
+		cubeTextureDesc.ArraySize = 1u;
+		cubeTextureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		cubeTextureDesc.SampleDesc.Count = 1u;
+		cubeTextureDesc.SampleDesc.Quality = 0u;
+		cubeTextureDesc.Usage = D3D11_USAGE_IMMUTABLE;
+		cubeTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		cubeTextureDesc.CPUAccessFlags = 0u;
+		cubeTextureDesc.MiscFlags = 0u;
+		cubeTextureDesc.Width = star_width;
+		cubeTextureDesc.Height = star_height;
+		cubeTextureDesc.MipLevels = star_numlevels;
+		for ( ; i < star_numpixels; ++i )
+		{
+			const unsigned int& x = star_pixels[ i ];
+			pixels[ i ] =
+				( ( x & 0xff000000u ) >> 24 ) |
+				( ( x & 0x00ff0000u ) >> 8 ) |
+				( ( x & 0x0000ff00u ) << 8 ) |
+				( ( x & 0x000000ffu ) << 24 );
+		}
+		for ( i = 0u; i < star_numlevels; ++i )
+		{
+			ZEROSTRUCT( cubeTexSubresourceData[ i ] );
+			cubeTexSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
+			cubeTexSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
+		}
+		dev->CreateTexture2D( &cubeTextureDesc, cubeTexSubresourceData, &m_cubeTexture );
+		delete[ ] pixels;
+		cubeSrvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+		cubeSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		cubeSrvDesc.Texture2D.MostDetailedMip = 0u;
+		cubeSrvDesc.Texture2D.MipLevels = star_numlevels;
+		dev->CreateShaderResourceView( m_cubeTexture, &cubeSrvDesc, &m_cubeTexSrv );
+		CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &m_talonTexture ), &m_talonTexSrv );
+
 		ID3D11SamplerState* samplerState;
 		D3D11_SAMPLER_DESC samplerDesc;
 		ZEROSTRUCT( samplerDesc );
-
-		if ( m_renderCube )
-		{
-			D3D11_SUBRESOURCE_DATA textureSubresourceData[ star_numlevels ];
-			D3D11_TEXTURE2D_DESC textureDesc;
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-			ZEROSTRUCT( textureDesc );
-			ZEROSTRUCT( srvDesc );
-			unsigned int* pixels = new unsigned int[ star_numpixels ];
-			unsigned int i = 0u;
-
-			textureDesc.ArraySize = 1u;
-			textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-			textureDesc.SampleDesc.Count = 1u;
-			textureDesc.SampleDesc.Quality = 0u;
-			textureDesc.Usage = D3D11_USAGE_IMMUTABLE;
-			textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-			textureDesc.CPUAccessFlags = 0u;
-			textureDesc.MiscFlags = 0u;
-			textureDesc.Width = star_width;
-			textureDesc.Height = star_height;
-			textureDesc.MipLevels = star_numlevels;
-			for ( ; i < star_numpixels; ++i )
-			{
-				const unsigned int& x = star_pixels[ i ];
-				pixels[ i ] =
-					( ( x & 0xff000000u ) >> 24 ) |
-					( ( x & 0x00ff0000u ) >> 8 ) |
-					( ( x & 0x0000ff00u ) << 8 ) |
-					( ( x & 0x000000ffu ) << 24 );
-			}
-			for ( i = 0u; i < star_numlevels; ++i )
-			{
-				ZEROSTRUCT( textureSubresourceData[ i ] );
-				textureSubresourceData[ i ].pSysMem = &pixels[ star_leveloffsets[ i ] ];
-				textureSubresourceData[ i ].SysMemPitch = ( star_width >> i ) * sizeof( unsigned int );
-			}
-			dev->CreateTexture2D( &textureDesc, textureSubresourceData, &m_talonTexture );
-			delete[ ] pixels;
-			srvDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MostDetailedMip = 0u;
-			srvDesc.Texture2D.MipLevels = star_numlevels;
-			dev->CreateShaderResourceView( m_talonTexture, &srvDesc, &m_talonTexSrv );
-		}
-		else CreateDDSTextureFromFile( dev, L"Assets\\Talon.dds", ( ID3D11Resource** )( &m_talonTexture ), &m_talonTexSrv );
 
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -767,31 +767,55 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	{
 		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&m_skyTexture, &m_skySrv );
 	} );
-	auto createMesh = createVS.then( [ this ]()
+	auto createTalonMesh = createVS.then( [ this ]()
 	{
 		Vertex* vertices = nullptr;
 		unsigned int* indices = nullptr;
 		unsigned int numVertices = 0u, numIndices = 0u;
 
-		ObjMesh_LoadMesh( ( m_renderCube ) ? ( "NULL" ) : ( "Assets\\Talon.mobj" ), vertices, indices, numVertices, numIndices );
+		ObjMesh_LoadMesh( "Assets\\Talon.mobj", vertices, indices, numVertices, numIndices );
 
 		D3D11_SUBRESOURCE_DATA vertexBufferData;
 		ZEROSTRUCT( vertexBufferData );
 		vertexBufferData.pSysMem = vertices;
 		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_vertexBuffer ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_talonVertexBuffer ) );
 
-		m_indexCount = numIndices;
+		m_talonIndexCount = numIndices;
 
 		D3D11_SUBRESOURCE_DATA indexBufferData;
 		ZEROSTRUCT( indexBufferData );
 		indexBufferData.pSysMem = indices;
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_indexBuffer ) );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_talonIndexBuffer ) );
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	auto createSkyMesh = createMesh.then( [ this ]()
+	auto createCubeMesh = createVS.then( [ this ]()
+	{
+		Vertex* vertices = nullptr;
+		unsigned int* indices = nullptr;
+		unsigned int numVertices = 0u, numIndices = 0u;
+
+		ObjMesh_LoadMesh( "NULL", vertices, indices, numVertices, numIndices );
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		vertexBufferData.pSysMem = vertices;
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_cubeVertexBuffer ) );
+
+		m_cubeIndexCount = numIndices;
+
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( indexBufferData );
+		indexBufferData.pSysMem = indices;
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_cubeIndexBuffer ) );
+
+		ObjMesh_Unload( vertices, indices );
+	} );
+	auto createSkyMesh = createTalonMesh.then( [ this ]()
 	{
 		static const Vertex vertices[ 8u ] =
 		{
@@ -826,10 +850,16 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	( createSkyMesh && createTexture && createSkyTexture && createPPPS1 && createPPPS2 && createPPPS3 ).then( [ this ]()
+	( createSkyMesh &&
+	  createTextures &&
+	  createSkyTexture &&
+	  createPPPS0 &&
+	  createPPPS1 &&
+	  createPPPS2 &&
+	  createPPPS3 ).then( [ this ]()
 	{
-
-	} ).then( [ this ]() { m_loadingComplete = true; } );
+		m_loadingComplete = true;
+	} );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -844,13 +874,17 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_postPS[ 2 ].Reset();
 	m_postPS[ 3 ].Reset();
 	m_constantBuffer.Reset();
-	m_vertexBuffer.Reset();
+	m_talonVertexBuffer.Reset();
+	m_talonIndexBuffer.Reset();
+	m_cubeVertexBuffer.Reset();
+	m_cubeIndexBuffer.Reset();
 	m_skyVertexBuffer.Reset();
-	m_indexBuffer.Reset();
 	m_skyIndexBuffer.Reset();
 	m_lightingBuffer.Reset();
 	m_skyTexture->Release();
 	m_skySrv->Release();
 	m_talonTexture->Release();
 	m_talonTexSrv->Release();
+	m_cubeTexture->Release();
+	m_cubeTexSrv->Release();
 }
