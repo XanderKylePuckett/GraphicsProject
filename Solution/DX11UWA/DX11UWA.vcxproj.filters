@@ -44,8 +44,11 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
-    <Filter Include="Content\PPPS">
-      <UniqueIdentifier>{6a78831e-0bfa-41c2-bdda-d61c98047489}</UniqueIdentifier>
+    <Filter Include="Content\Shaders">
+      <UniqueIdentifier>{d03df20a-ad57-43bc-b914-7e1a34e23e8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Content\Shaders\PPPS">
+      <UniqueIdentifier>{b65fea78-bab8-402a-b9d6-a5d4022ca99a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -91,29 +94,6 @@
     <None Include="DX11UWA_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Content\VertexShader.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PixelShader.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PixelShaderSky.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PPPS\PostPS0.hlsl">
-      <Filter>Content\PPPS</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PPPS\PostPS1.hlsl">
-      <Filter>Content\PPPS</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PPPS\PostPS2.hlsl">
-      <Filter>Content\PPPS</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PPPS\PostPS3.hlsl">
-      <Filter>Content\PPPS</Filter>
-    </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
     <Media Include="Assets\Talon.mobj">
       <Filter>Assets</Filter>
     </Media>
@@ -126,5 +106,34 @@
     <Media Include="Assets\Plane.dds">
       <Filter>Assets</Filter>
     </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Content\Shaders\PixelShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PixelShaderSky.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VertexShader.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VertexShaderPost.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VertexShaderSky.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PPPS\PostPS0.hlsl">
+      <Filter>Content\Shaders\PPPS</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PPPS\PostPS1.hlsl">
+      <Filter>Content\Shaders\PPPS</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PPPS\PostPS2.hlsl">
+      <Filter>Content\Shaders\PPPS</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PPPS\PostPS3.hlsl">
+      <Filter>Content\Shaders\PPPS</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

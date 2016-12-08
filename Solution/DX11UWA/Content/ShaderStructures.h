@@ -14,12 +14,8 @@ namespace DX11UWA
 	{
 		DirectX::XMFLOAT4 lightState;
 		DirectX::XMFLOAT4 dLightDirection;
-		DirectX::XMFLOAT4 pLightPos0;
-		DirectX::XMFLOAT4 pLightPos1;
-		DirectX::XMFLOAT4 pLightPos2;
-		DirectX::XMFLOAT4 pLightColorRadius0;
-		DirectX::XMFLOAT4 pLightColorRadius1;
-		DirectX::XMFLOAT4 pLightColorRadius2;
+		DirectX::XMFLOAT4 pLightPos[ 3 ];
+		DirectX::XMFLOAT4 pLightColorRadius[ 3 ];
 	};
 
 	struct Vertex

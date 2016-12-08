@@ -56,6 +56,8 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_skyVertexShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_postVertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_postPS[ 4 ];
