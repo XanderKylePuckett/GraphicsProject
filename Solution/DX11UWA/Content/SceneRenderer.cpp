@@ -179,11 +179,9 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
 	XMStoreFloat4x4( &m_rttConstantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
 	XMStoreFloat4x4( &m_rttConstantBufferData.model, DirectX::XMMatrixIdentity() );
-	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
-	static const DirectX::XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.0f, -2.0f, 0.0f };
+	static const DirectX::XMVECTORF32 at = { 0.0f, 0.0f, 0.0f, 0.0f };
 	static const DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
-	DirectX::XMFLOAT4X4 rttCam;
-	XMStoreFloat4x4( &rttCam, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
 	XMStoreFloat4x4( &m_rttConstantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
 
 	ID3D11RasterizerState* rsState;
@@ -258,6 +256,9 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void SceneRenderer::Update( DX::StepTimer const& timer )
 {
+	if ( m_loadingComplete )
+		UpdateRTTScene( timer );
+
 	AnimateMesh( timer );
 	UpdateLights( timer );
 
@@ -283,9 +284,6 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
 	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
 	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
-
-	if ( m_loadingComplete )
-		UpdateRTTScene( timer );
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
@@ -466,10 +464,14 @@ void SceneRenderer::DrawRTTScene( void )
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
 
-	context->IASetVertexBuffers( 0u, 1u, m_cubeVertexBuffer.GetAddressOf(), &stride, &offset );
-	context->IASetIndexBuffer( m_cubeIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
+	context->IASetVertexBuffers( 0u, 1u, m_rttVertexBuffer.GetAddressOf(), &stride, &offset );
+	context->IASetIndexBuffer( m_rttIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 
-	context->DrawIndexed( m_cubeIndexCount, 0u, 0 );
+	D3D11_VIEWPORT screenViewport = m_deviceResources->GetScreenViewport();
+	D3D11_VIEWPORT rttViewport = CD3D11_VIEWPORT( 0.0f, 0.0f, ( float )m_rttSize, ( float )m_rttSize );
+	context->RSSetViewports( 1u, &rttViewport );
+	context->DrawIndexed( m_rttIndexCount, 0u, 0 );
+	context->RSSetViewports( 1u, &screenViewport );
 }
 
 // Renders one frame using the vertex and pixel shaders.
@@ -545,6 +547,11 @@ bool SceneRenderer::Render( void )
 
 	if ( m_drawPlane ) DrawPlane();
 	return true;
+}
+
+ID3D11Texture2D*& SceneRenderer::GetRttTex( void )
+{
+	return m_rttTex;
 }
 
 bool operator==( const Vertex& lhs, const Vertex& rhs )
@@ -932,9 +939,6 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	auto createRttTexture = ( createSkyMesh && createTextures && createPPPS0 && createPPPS1 && createPPPS2 && createPPPS3 && createPostVS ).then( [ this ]()
 	{
-		const UINT texWidth = 512u;
-		const UINT texHeight = 512u;
-
 		D3D11_TEXTURE2D_DESC rttTexDesc;
 		D3D11_TEXTURE2D_DESC dsTexDesc;
 		D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
@@ -947,8 +951,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		ZEROSTRUCT( srvDesc );
 		ZEROSTRUCT( dsvDesc );
 
-		rttTexDesc.Width = texWidth;
-		rttTexDesc.Height = texHeight;
+		rttTexDesc.Width = m_rttSize;
+		rttTexDesc.Height = m_rttSize;
 		rttTexDesc.MipLevels = 1u;
 		rttTexDesc.ArraySize = 1u;
 		rttTexDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -971,8 +975,8 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		srvDesc.Texture2D.MostDetailedMip = 0u;
 		m_deviceResources->GetD3DDevice()->CreateShaderResourceView( m_rttTex, &srvDesc, &m_rttSrv );
 
-		dsTexDesc.Width = texWidth;
-		dsTexDesc.Height = texHeight;
+		dsTexDesc.Width = m_rttSize;
+		dsTexDesc.Height = m_rttSize;
 		dsTexDesc.MipLevels = 1u;
 		dsTexDesc.ArraySize = 1u;
 		dsTexDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -1002,7 +1006,40 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC rttConstantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &rttConstantBufferDesc, nullptr, &m_rttConstantBuffer ) );
 	} );
-	( createRttTexture && createRttPS && createRttVS ).then( [ this ]() { m_loadingComplete = true; } );
+	auto createRttMesh = ( createRttPS && createRttVS ).then( [ this ]()
+	{
+		Vertex* vertices = nullptr;
+		unsigned int* indices = nullptr;
+		unsigned int numVertices, numIndices;
+		numVertices = 3u;
+		numIndices = 3u;
+		vertices = new Vertex[ numVertices ];
+		indices = new unsigned int[ numIndices ];
+		vertices[ 0u ] = { DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4() };
+		vertices[ 1u ] = { DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4() };
+		vertices[ 2u ] = { DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4() };
+		indices[ 0u ] = 0u;
+		indices[ 1u ] = 1u;
+		indices[ 2u ] = 2u;
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		vertexBufferData.pSysMem = vertices;
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_rttVertexBuffer ) );
+
+		m_rttIndexCount = numIndices;
+
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( indexBufferData );
+		indexBufferData.pSysMem = indices;
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_rttIndexBuffer ) );
+
+		delete[ ] vertices;
+		delete[ ] indices;
+	} );
+	( createRttTexture && createRttMesh ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -1026,6 +1063,8 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_talonIndexBuffer.Reset();
 	m_cubeVertexBuffer.Reset();
 	m_cubeIndexBuffer.Reset();
+	m_rttVertexBuffer.Reset();
+	m_rttIndexBuffer.Reset();
 	m_skyVertexBuffer.Reset();
 	m_skyIndexBuffer.Reset();
 	m_lightingBuffer.Reset();

@@ -20,6 +20,7 @@ namespace DX11UWA
 		void DrawSurfaceToScreen( ID3D11Texture2D*& surface );
 		void CreateDrawSurface( ID3D11Texture2D** );
 		void DrawRTTScene( void );
+		ID3D11Texture2D*& GetRttTex( void );
 
 		// Helper functions for keyboard and mouse input
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
@@ -56,6 +57,8 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeIndexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttVertexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
@@ -75,6 +78,7 @@ namespace DX11UWA
 		LightingBuffer	m_lightingBufferData;
 		uint32	m_talonIndexCount;
 		uint32	m_cubeIndexCount;
+		uint32	m_rttIndexCount;
 
 		ID3D11Texture2D* m_talonTexture;
 		ID3D11ShaderResourceView* m_talonTexSrv;
@@ -94,6 +98,8 @@ namespace DX11UWA
 		bool m_drawPlane;
 		unsigned int m_currPPPS;
 		bool m_renderCube;
+		const unsigned int m_rttSize = 1024u;
+
 
 		// Data members for keyboard and mouse input
 		char	m_kbuttons[ 256 ];

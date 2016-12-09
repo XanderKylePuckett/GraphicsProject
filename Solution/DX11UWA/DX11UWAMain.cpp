@@ -70,6 +70,7 @@ bool DX11UWAMain::Render( void )
 	m_sceneRenderer->CreateDrawSurface( &drawSurface );
 	if ( m_sceneRenderer->Render() )
 		m_sceneRenderer->DrawSurfaceToScreen( drawSurface );
+		//m_sceneRenderer->DrawSurfaceToScreen( m_sceneRenderer->GetRttTex() );
 	m_fpsTextRenderer->Render();
 
 	drawSurface->Release();
