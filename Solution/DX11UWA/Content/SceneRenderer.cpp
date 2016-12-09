@@ -177,12 +177,15 @@ SceneRenderer::SceneRenderer( const std::shared_ptr<DX::DeviceResources>& device
 	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, 1.0f, 0.01f, 100.0f );
 	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
 	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
-	XMStoreFloat4x4( &m_rttConstantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
-	XMStoreFloat4x4( &m_rttConstantBufferData.model, DirectX::XMMatrixIdentity() );
 	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.0f, -2.0f, 0.0f };
 	static const DirectX::XMVECTORF32 at = { 0.0f, 0.0f, 0.0f, 0.0f };
 	static const DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
-	XMStoreFloat4x4( &m_rttConstantBufferData.view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
+	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+	{
+		XMStoreFloat4x4( &m_rttConstantBufferDatas[ i ].projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
+		XMStoreFloat4x4( &m_rttConstantBufferDatas[ i ].model, DirectX::XMMatrixIdentity() );
+		XMStoreFloat4x4( &m_rttConstantBufferDatas[ i ].view, XMMatrixTranspose( XMMatrixLookAtLH( eye, at, up ) ) );
+	}
 
 	ID3D11RasterizerState* rsState;
 	D3D11_RASTERIZER_DESC rsDesc;
@@ -435,11 +438,12 @@ void SceneRenderer::DrawPlane( void )
 
 void SceneRenderer::UpdateRTTScene( DX::StepTimer const& timer )
 {
-	float radians = fmodf(
-		( float )timer.GetTotalSeconds() *
-		DirectX::XMConvertToRadians( m_degreesPerSecond ),
-		DirectX::XM_2PI );
-	XMStoreFloat4x4( &m_rttConstantBufferData.model, XMMatrixTranspose( DirectX::XMMatrixRotationZ( radians * -2.0f ) ) );
+	float radians = ( float )timer.GetTotalSeconds() *
+		DirectX::XMConvertToRadians( m_degreesPerSecond );
+	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+		XMStoreFloat4x4( &m_rttConstantBufferDatas[ i ].model,
+						 XMMatrixTranspose( DirectX::XMMatrixRotationZ(
+						 radians * -3.065f * ( 1.0f - i / ( float )NUM_RTT_TRIS ) ) ) );
 }
 
 void SceneRenderer::DrawRTTScene( void )
@@ -447,30 +451,28 @@ void SceneRenderer::DrawRTTScene( void )
 	if ( !m_loadingComplete ) return;
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
-
 	m_deviceResources->GetD3DDeviceContext()->OMSetRenderTargets( 1u, &m_rttRtv, m_rttDsv );
 	m_deviceResources->GetD3DDeviceContext()->ClearRenderTargetView( m_rttRtv, DirectX::Colors::White );
 	m_deviceResources->GetD3DDeviceContext()->ClearDepthStencilView( m_rttDsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0ui8 );
-
 	context->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 	context->IASetInputLayout( m_inputLayout.Get() );
-
-	context->UpdateSubresource1( m_rttConstantBuffer.Get(), 0u, nullptr, &m_rttConstantBufferData, 0u, 0u, 0u );
-	context->VSSetConstantBuffers1( 0u, 1u, m_rttConstantBuffer.GetAddressOf(), nullptr, nullptr );
-
 	context->VSSetShader( m_rttVertexShader.Get(), nullptr, 0u );
 	context->PSSetShader( m_rttPixelShader.Get(), nullptr, 0u );
-
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
-
-	context->IASetVertexBuffers( 0u, 1u, m_rttVertexBuffer.GetAddressOf(), &stride, &offset );
-	context->IASetIndexBuffer( m_rttIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
-
 	D3D11_VIEWPORT screenViewport = m_deviceResources->GetScreenViewport();
 	D3D11_VIEWPORT rttViewport = CD3D11_VIEWPORT( 0.0f, 0.0f, ( float )m_rttSize, ( float )m_rttSize );
 	context->RSSetViewports( 1u, &rttViewport );
-	context->DrawIndexed( m_rttIndexCount, 0u, 0 );
+
+	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+	{
+		context->UpdateSubresource1( m_rttConstantBuffers[ i ].Get(), 0u, nullptr, &m_rttConstantBufferDatas[ i ], 0u, 0u, 0u );
+		context->VSSetConstantBuffers1( 0u, 1u, m_rttConstantBuffers[ i ].GetAddressOf(), nullptr, nullptr );
+		context->IASetVertexBuffers( 0u, 1u, m_rttVertexBuffers[ i ].GetAddressOf(), &stride, &offset );
+		context->IASetIndexBuffer( m_rttIndexBuffers[ i ].Get(), DXGI_FORMAT_R32_UINT, 0u );
+		context->DrawIndexed( m_rttIndexCounts[ i ], 0u, 0 );
+	}
+
 	context->RSSetViewports( 1u, &screenViewport );
 }
 
@@ -1004,42 +1006,49 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_rttVertexShader ) );
 
 		CD3D11_BUFFER_DESC rttConstantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &rttConstantBufferDesc, nullptr, &m_rttConstantBuffer ) );
+		for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+			DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &rttConstantBufferDesc, nullptr, &m_rttConstantBuffers[ i ] ) );
 	} );
-	auto createRttMesh = ( createRttPS && createRttVS ).then( [ this ]()
+	auto createRttMeshes = ( createRttPS && createRttVS ).then( [ this ]()
 	{
-		Vertex* vertices = nullptr;
-		unsigned int* indices = nullptr;
-		unsigned int numVertices, numIndices;
-		numVertices = 3u;
-		numIndices = 3u;
-		vertices = new Vertex[ numVertices ];
-		indices = new unsigned int[ numIndices ];
-		vertices[ 0u ] = { DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4() };
-		vertices[ 1u ] = { DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4() };
-		vertices[ 2u ] = { DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 1.0f ), DirectX::XMFLOAT4() };
-		indices[ 0u ] = 0u;
-		indices[ 1u ] = 1u;
-		indices[ 2u ] = 2u;
+		Vertex* vertices[ NUM_RTT_TRIS ] = { nullptr };
+		unsigned int* indices[ NUM_RTT_TRIS ] = { nullptr };
+		unsigned int numVertices[ NUM_RTT_TRIS ], numIndices[ NUM_RTT_TRIS ];
 
-		D3D11_SUBRESOURCE_DATA vertexBufferData;
-		ZEROSTRUCT( vertexBufferData );
-		vertexBufferData.pSysMem = vertices;
-		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices, D3D11_BIND_VERTEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_rttVertexBuffer ) );
+		for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+		{
+			numVertices[ i ] = 3u;
+			numIndices[ i ] = 3u;
 
-		m_rttIndexCount = numIndices;
+			vertices[ i ] = new Vertex[ numVertices[ i ] ];
+			indices[ i ] = new unsigned int[ numIndices[ i ] ];
 
-		D3D11_SUBRESOURCE_DATA indexBufferData;
-		ZEROSTRUCT( indexBufferData );
-		indexBufferData.pSysMem = indices;
-		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices, D3D11_BIND_INDEX_BUFFER );
-		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_rttIndexBuffer ) );
+			static const float pLightDist = 1.25f;
+			static const float sq3div2 = 0.8660254f;
 
-		delete[ ] vertices;
-		delete[ ] indices;
+			vertices[ i ][ 0u ] = { DirectX::XMFLOAT4( 0.0f, pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
+			vertices[ i ][ 1u ] = { DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f * pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
+			vertices[ i ][ 2u ] = { DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f * pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 0.3f ), DirectX::XMFLOAT4() };
+			indices[ i ][ 0u ] = 0u;
+			indices[ i ][ 1u ] = 1u;
+			indices[ i ][ 2u ] = 2u;
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData;
+			ZEROSTRUCT( vertexBufferData );
+			vertexBufferData.pSysMem = vertices[ i ];
+			CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * numVertices[ i ], D3D11_BIND_VERTEX_BUFFER );
+			DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_rttVertexBuffers[ i ] ) );
+			m_rttIndexCounts[ i ] = numIndices[ i ];
+			D3D11_SUBRESOURCE_DATA indexBufferData;
+			ZEROSTRUCT( indexBufferData );
+			indexBufferData.pSysMem = indices[ i ];
+			CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * numIndices[ i ], D3D11_BIND_INDEX_BUFFER );
+			DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_rttIndexBuffers[ i ] ) );
+			delete[ ] vertices[ i ];
+			delete[ ] indices[ i ];
+		}
 	} );
-	( createRttTexture && createRttMesh ).then( [ this ]() { m_loadingComplete = true; } );
+	( createRttTexture && createRttMeshes ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -1058,13 +1067,10 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_postPS[ 2 ].Reset();
 	m_postPS[ 3 ].Reset();
 	m_constantBuffer.Reset();
-	m_rttConstantBuffer.Reset();
 	m_talonVertexBuffer.Reset();
 	m_talonIndexBuffer.Reset();
 	m_cubeVertexBuffer.Reset();
 	m_cubeIndexBuffer.Reset();
-	m_rttVertexBuffer.Reset();
-	m_rttIndexBuffer.Reset();
 	m_skyVertexBuffer.Reset();
 	m_skyIndexBuffer.Reset();
 	m_lightingBuffer.Reset();
@@ -1079,4 +1085,10 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_rttRtv->Release();
 	m_rttSrv->Release();
 	m_rttDsv->Release();
+	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
+	{
+		m_rttConstantBuffers[ i ].Reset();
+		m_rttVertexBuffers[ i ].Reset();
+		m_rttIndexBuffers[ i ].Reset();
+	}
 }

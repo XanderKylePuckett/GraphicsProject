@@ -4,6 +4,7 @@
 #include "ShaderStructures.h"
 #include "..\\Common\\StepTimer.h"
 #include <vector>
+#define NUM_RTT_TRIS 8u
 
 namespace DX11UWA
 {
@@ -57,8 +58,8 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeIndexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttVertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttIndexBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttVertexBuffers[ NUM_RTT_TRIS ];
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttIndexBuffers[ NUM_RTT_TRIS ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
@@ -70,15 +71,15 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_rttPixelShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_postPS[ 4 ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttConstantBuffer;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_rttConstantBuffers[ NUM_RTT_TRIS ];
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_lightingBuffer;
 
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
-		ModelViewProjectionConstantBuffer	m_rttConstantBufferData;
+		ModelViewProjectionConstantBuffer	m_rttConstantBufferDatas[ NUM_RTT_TRIS ];
 		LightingBuffer	m_lightingBufferData;
 		uint32	m_talonIndexCount;
 		uint32	m_cubeIndexCount;
-		uint32	m_rttIndexCount;
+		uint32	m_rttIndexCounts[ NUM_RTT_TRIS ];
 
 		ID3D11Texture2D* m_talonTexture;
 		ID3D11ShaderResourceView* m_talonTexSrv;
