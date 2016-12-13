@@ -6,7 +6,7 @@
 #include <fstream>
 using namespace DX11UWA;
 
-const unsigned int numInstances = 9u;
+const unsigned int numInstances = 32u;
 
 void SceneRenderer::CreateDrawSurface( ID3D11Texture2D** pTexture )
 {
@@ -222,9 +222,8 @@ void SceneRenderer::CreateWindowSizeDependentResources( void )
 
 	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
 
-	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const DirectX::XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
-	static const DirectX::XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const DirectX::XMVECTORF32 eye = { 0.0f, 1.7f, -2.5f, 0.0f };
+	static const DirectX::XMVECTORF32 at = { 0.0f, 0.0f, 0.0f, 0.0f };
 	static const DirectX::XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
 	XMStoreFloat4x4( &m_camera, XMMatrixInverse( nullptr, XMMatrixLookAtLH( eye, at, up ) ) );
@@ -1067,18 +1066,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	} );
 	( createRttTexture && createRttMeshes && createVSI ).then( [ this ]()
 	{
-		InstanceData instances[ numInstances ] =
-		{
-			{ DirectX::XMFLOAT4( 2.0f, 0.0f, 2.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 2.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 2.0f, 0.0f, -2.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.0f, 0.0f, 2.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.0f, 0.0f, -2.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -2.0f, 0.0f, 2.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -2.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -2.0f, 0.0f, -2.0f, 1.0f ) }
-		};
+		static InstanceData instances[ numInstances ];
+		for ( unsigned int i = 0u; i < numInstances; ++i )
+			instances[ i ].positionOffset = DirectX::XMFLOAT4( i * 1.0f, i * 0.5f, i * 2.0f, 1.0f );
 		D3D11_SUBRESOURCE_DATA instanceBufferData;
 		ZEROSTRUCT( instanceBufferData );
 		instanceBufferData.pSysMem = instances;
