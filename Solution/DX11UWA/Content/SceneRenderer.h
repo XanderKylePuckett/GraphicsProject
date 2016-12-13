@@ -94,6 +94,11 @@ namespace DX11UWA
 		ID3D11ShaderResourceView* m_rttSrv;
 		ID3D11DepthStencilView* m_rttDsv;
 		ID3D11Buffer* m_instanceBuffer;
+		ID3D11Texture2D* m_planeTexture;
+		ID3D11ShaderResourceView* m_planeSrv;
+		ID3D11Buffer* m_planeVertexBuffer;
+		ID3D11Buffer* m_planeIndexBuffer;
+		ID3D11Buffer* m_planeConstantBuffer;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

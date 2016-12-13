@@ -142,7 +142,7 @@ void SceneRenderer::ToggleWireframe( void )
 	m_deviceResources->GetD3DDeviceContext()->RSGetState( &rsState );
 	rsState->GetDesc( &rsDesc );
 	rsState->Release();
-	rsDesc.FillMode = ( ( ( D3D11_FILL_WIREFRAME ) == ( rsDesc.FillMode ) ) ? ( D3D11_FILL_SOLID ) : ( D3D11_FILL_WIREFRAME ) );
+	rsDesc.FillMode = D3D11_FILL_WIREFRAME == rsDesc.FillMode ? D3D11_FILL_SOLID : D3D11_FILL_WIREFRAME;
 	m_deviceResources->GetD3DDevice()->CreateRasterizerState( &rsDesc, &rsState );
 	m_deviceResources->GetD3DDeviceContext()->RSSetState( rsState );
 	rsState->Release();
@@ -256,20 +256,20 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 {
 	static bool lightAnim = true;
 	if ( KeyHit( 'T' ) ) lightAnim = !lightAnim;
-	if ( KeyHit( '1' ) ) m_lightingBufferData.lightState.x = m_lightingBufferData.lightState.x > 0.5f ? 0.0f : 1.0f;
-	if ( KeyHit( '2' ) ) m_lightingBufferData.lightState.y = m_lightingBufferData.lightState.y > 0.5f ? 0.0f : 1.0f;
+	if ( KeyHit( '1' ) ) m_lightingBufferData.lightState.x = 0.5f < m_lightingBufferData.lightState.x ? 0.0f : 1.0f;
+	if ( KeyHit( '2' ) ) m_lightingBufferData.lightState.y = 0.5f < m_lightingBufferData.lightState.y ? 0.0f : 1.0f;
 
 	if ( lightAnim )
 	{
 		static double animTime = 0.0;
 		animTime += timer.GetElapsedSeconds();
-		DirectX::XMFLOAT4 dir( -1.0f, -1.0f, 1.0f, 1.0f );
+		static const DirectX::XMFLOAT4 dir( -1.0f, -1.0f, 1.0f, 1.0f );
 		DirectX::XMVECTOR v = DirectX::XMLoadFloat4( &dir );
-		DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
+		const DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
 		m_lightingBufferData.pLightPos[ 0 ] = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
 		m_lightingBufferData.pLightPos[ 1 ] = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
 		m_lightingBufferData.pLightPos[ 2 ] = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
-		for ( int i = 0; i < 3; ++i )
+		for ( unsigned int i = 0u; i < 3u; ++i )
 			DirectX::XMStoreFloat4( &m_lightingBufferData.pLightPos[ i ], DirectX::XMVector3Transform(
 			DirectX::XMLoadFloat4( &m_lightingBufferData.pLightPos[ i ] ), m ) );
 		v = DirectX::XMVector3Transform( v, m );
@@ -281,12 +281,15 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 void SceneRenderer::Update( DX::StepTimer const& timer )
 {
 	if ( m_loadingComplete )
+	{
+		if ( KeyHit( 'K' ) )
+			ToggleWireframe();
 		UpdateRTTScene( timer );
+	}
 
 	AnimateMesh( timer );
 	UpdateLights( timer );
 
-	if ( m_loadingComplete ) if ( KeyHit( 'K' ) ) ToggleWireframe();
 	if ( KeyHit( '4' ) ) m_currPPPS = 0u;
 	if ( KeyHit( '5' ) ) m_currPPPS = 1u;
 	if ( KeyHit( '6' ) ) m_currPPPS = 2u;
@@ -299,73 +302,41 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	if ( KeyHit( 'P' ) ) m_drawPlane = !m_drawPlane;
 
 	Windows::Foundation::Size outputSize = m_deviceResources->GetOutputSize();
-	float aspectRatio = outputSize.Width / outputSize.Height;
+	const float aspectRatio = outputSize.Width / outputSize.Height;
 	static float fov = 70.0f;
 	if ( m_kbuttons[ '8' ] ) fov -= ( float )timer.GetElapsedSeconds() * 30.0f;
 	if ( m_kbuttons[ '9' ] ) fov += ( float )timer.GetElapsedSeconds() * 30.0f;
-	float fovAngleY = DirectX::XMConvertToRadians( fov );
-	DirectX::XMMATRIX perspectiveMatrix = DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, 0.01f, 100.0f );
-	DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
-	DirectX::XMMATRIX orientationMatrix = XMLoadFloat4x4( &orientation );
-	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose( perspectiveMatrix * orientationMatrix ) );
+	const float fovAngleY = DirectX::XMConvertToRadians( fov );
+	const DirectX::XMFLOAT4X4 orientation = m_deviceResources->GetOrientationTransform3D();
+	static const float nearZ = 0.01f;
+	static const float farZ = 100.0f;
+	XMStoreFloat4x4( &m_constantBufferData.projection, XMMatrixTranspose(
+		DirectX::XMMatrixPerspectiveFovLH( fovAngleY, aspectRatio, nearZ, farZ ) *
+		XMLoadFloat4x4( &orientation ) ) );
 }
 
 void SceneRenderer::AnimateMesh( DX::StepTimer const& timer )
 {
-	// Prepare to pass the updated model matrix to the shader
-	float radians = ( float )fmod(
-		timer.GetTotalSeconds() *
-		DirectX::XMConvertToRadians( m_degreesPerSecond ),
-		DirectX::XM_2PI );
-	XMStoreFloat4x4( &m_constantBufferData.model, XMMatrixTranspose( DirectX::XMMatrixRotationY( radians ) ) );
+	XMStoreFloat4x4( &m_constantBufferData.model,
+					 XMMatrixTranspose(
+					 DirectX::XMMatrixRotationY(
+					 fmodf( ( float )timer.GetTotalSeconds() *
+					 DirectX::XMConvertToRadians( m_degreesPerSecond ),
+					 DirectX::XM_2PI ) ) ) );
 }
 
 void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSpd, float const rotSpd )
 {
-	const float delta_time = ( float )timer.GetElapsedSeconds();
-
-	if ( m_kbuttons[ 'W' ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, 0.0f, moveSpd * delta_time );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
-	if ( m_kbuttons[ 'S' ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, 0.0f, -moveSpd * delta_time );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
-	if ( m_kbuttons[ 'A' ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( -moveSpd * delta_time, 0.0f, 0.0f );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
-	if ( m_kbuttons[ 'D' ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( moveSpd * delta_time, 0.0f, 0.0f );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
-	if ( m_kbuttons[ VK_SHIFT ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, -moveSpd * delta_time, 0.0f );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
-	if ( m_kbuttons[ VK_SPACE ] )
-	{
-		DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation( 0.0f, moveSpd * delta_time, 0.0f );
-		DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-		DirectX::XMMATRIX result = XMMatrixMultiply( translation, temp_camera );
-		XMStoreFloat4x4( &m_camera, result );
-	}
+	const float dt = ( float )timer.GetElapsedSeconds();
+	const float dCom = dt * moveSpd;
+	DirectX::XMFLOAT3 dPos( 0.0f, 0.0f, 0.0f );
+	if ( m_kbuttons[ 'W' ] ) dPos.z += dCom;
+	if ( m_kbuttons[ 'S' ] ) dPos.z -= dCom;
+	if ( m_kbuttons[ 'A' ] ) dPos.x -= dCom;
+	if ( m_kbuttons[ 'D' ] ) dPos.x += dCom;
+	if ( m_kbuttons[ VK_SHIFT ] ) dPos.y -= dCom;
+	if ( m_kbuttons[ VK_SPACE ] ) dPos.y += dCom;
+	XMStoreFloat4x4( &m_camera, XMMatrixMultiply( DirectX::XMMatrixTranslation( dPos.x, dPos.y, dPos.z ), XMLoadFloat4x4( &m_camera ) ) );
 
 	if ( m_currMousePos )
 	{
@@ -384,12 +355,9 @@ void SceneRenderer::UpdateCamera( DX::StepTimer const& timer, float const moveSp
 			m_camera._42 = 0.0f;
 			m_camera._43 = 0.0f;
 
-			DirectX::XMMATRIX rotX = DirectX::XMMatrixRotationX( dy * rotSpd * delta_time );
-			DirectX::XMMATRIX rotY = DirectX::XMMatrixRotationY( dx * rotSpd * delta_time );
-
-			DirectX::XMMATRIX temp_camera = XMLoadFloat4x4( &m_camera );
-			temp_camera = XMMatrixMultiply( XMMatrixMultiply( rotX, temp_camera ), rotY );
-			XMStoreFloat4x4( &m_camera, temp_camera );
+			DirectX::XMMATRIX rotX = DirectX::XMMatrixRotationX( dy * rotSpd * dt );
+			DirectX::XMMATRIX rotY = DirectX::XMMatrixRotationY( dx * rotSpd * dt );
+			XMStoreFloat4x4( &m_camera, XMMatrixMultiply( XMMatrixMultiply( rotX, XMLoadFloat4x4( &m_camera ) ), rotY ) );
 
 			m_camera._41 = pos.x;
 			m_camera._42 = pos.y;
@@ -407,11 +375,6 @@ void SceneRenderer::SetInputDeviceData( const char* kb, const Windows::UI::Input
 
 void SceneRenderer::DrawPlane( void )
 {
-	ID3D11Buffer* vertexBuffer;
-	ID3D11Buffer* indexBuffer;
-	ID3D11Buffer* constantBuffer;
-	ID3D11Texture2D* planeTexture;
-	ID3D11ShaderResourceView* planeSrv;
 	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
 	ID3D11Device3* const device = m_deviceResources->GetD3DDevice();
 	ModelViewProjectionConstantBuffer mvpCbufferData;
@@ -438,24 +401,21 @@ void SceneRenderer::DrawPlane( void )
 	mvpCbufferData.projection = m_constantBufferData.projection;
 	mvpCbufferData.view = m_constantBufferData.view;
 
-	CreateDDSTextureFromFile( device, L"Assets\\Plane.dds", ( ID3D11Resource** )&planeTexture, &planeSrv );
-	device->CreateBuffer( &constantBufferDesc, nullptr, &constantBuffer );
-	device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &vertexBuffer );
-	device->CreateBuffer( &indexBufferDesc, &indexBufferData, &indexBuffer );
+	device->CreateBuffer( &constantBufferDesc, nullptr, &m_planeConstantBuffer );
+	device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_planeVertexBuffer );
+	device->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_planeIndexBuffer );
 
-	context->UpdateSubresource1( constantBuffer, 0u, nullptr, &mvpCbufferData, 0u, 0u, 0u );
-	context->VSSetConstantBuffers1( 0u, 1u, &constantBuffer, nullptr, nullptr );
-	context->IASetVertexBuffers( 0u, 1u, &vertexBuffer, &stride, &offset );
-	context->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0u );
-	context->PSSetShaderResources( 0u, 1u, &planeSrv );
+	context->UpdateSubresource1( m_planeConstantBuffer, 0u, nullptr, &mvpCbufferData, 0u, 0u, 0u );
+	context->VSSetConstantBuffers1( 0u, 1u, &m_planeConstantBuffer, nullptr, nullptr );
+	context->IASetVertexBuffers( 0u, 1u, &m_planeVertexBuffer, &stride, &offset );
+	context->IASetIndexBuffer( m_planeIndexBuffer, DXGI_FORMAT_R32_UINT, 0u );
+	context->PSSetShaderResources( 0u, 1u, &m_planeSrv );
 	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
 	context->DrawIndexed( 6u, 0u, 0 );
 
-	vertexBuffer->Release();
-	indexBuffer->Release();
-	constantBuffer->Release();
-	planeTexture->Release();
-	planeSrv->Release();
+	m_planeVertexBuffer->Release();
+	m_planeIndexBuffer->Release();
+	m_planeConstantBuffer->Release();
 }
 
 void SceneRenderer::UpdateRTTScene( DX::StepTimer const& timer )
@@ -826,8 +786,10 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 	auto createTextures = ( loadSkyPS && loadPS ).then( [ this ]()
 	{
-		CreateDDSTextureFromFile( m_deviceResources->GetD3DDevice(), L"Assets\\Skybox.dds", ( ID3D11Resource** )&m_skyTexture, &m_skySrv );
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
+
+		CreateDDSTextureFromFile( dev, L"Assets\\Skybox.dds", ( ID3D11Resource** )&m_skyTexture, &m_skySrv );
+		CreateDDSTextureFromFile( dev, L"Assets\\Plane.dds", ( ID3D11Resource** )&m_planeTexture, &m_planeSrv );
 
 		D3D11_SUBRESOURCE_DATA cubeTexSubresourceData[ star_numlevels ];
 		D3D11_TEXTURE2D_DESC cubeTextureDesc;
@@ -1115,6 +1077,8 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_rttRtv->Release();
 	m_rttSrv->Release();
 	m_rttDsv->Release();
+	m_planeTexture->Release();
+	m_planeSrv->Release();
 	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
 	{
 		m_rttConstantBuffers[ i ].Reset();
