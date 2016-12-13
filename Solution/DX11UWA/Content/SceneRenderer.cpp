@@ -377,51 +377,27 @@ void SceneRenderer::DrawPlane( void )
 {
 	ID3D11DeviceContext3* const context = m_deviceResources->GetD3DDeviceContext();
 	ID3D11Device3* const device = m_deviceResources->GetD3DDevice();
-	ModelViewProjectionConstantBuffer mvpCbufferData;
+
 	UINT stride = sizeof( Vertex );
 	UINT offset = 0u;
-	CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
-	D3D11_SUBRESOURCE_DATA vertexBufferData;
-	D3D11_SUBRESOURCE_DATA indexBufferData;
-	ZEROSTRUCT( vertexBufferData );
-	ZEROSTRUCT( indexBufferData );
-	CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
-	CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 6u, D3D11_BIND_INDEX_BUFFER );
-	static const Vertex vertices[ 4 ] =
-	{
-		{ DirectX::XMFLOAT4( -10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( -10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-		{ DirectX::XMFLOAT4( 10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
-	};
-	static const unsigned int indices[ 6 ] = { 0u, 1u, 2u, 0u, 2u, 3u };
-	vertexBufferData.pSysMem = vertices;
-	indexBufferData.pSysMem = indices;
+	context->IASetVertexBuffers( 0u, 1u, &m_planeVertexBuffer, &stride, &offset );
+	context->IASetIndexBuffer( m_planeIndexBuffer, DXGI_FORMAT_R32_UINT, 0u );
+	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
+	context->PSSetShaderResources( 0u, 1u, &m_planeSrv );
+
+	ModelViewProjectionConstantBuffer mvpCbufferData;
 	XMStoreFloat4x4( &mvpCbufferData.model, DirectX::XMMatrixIdentity() );
 	mvpCbufferData.projection = m_constantBufferData.projection;
 	mvpCbufferData.view = m_constantBufferData.view;
-
-	device->CreateBuffer( &constantBufferDesc, nullptr, &m_planeConstantBuffer );
-	device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_planeVertexBuffer );
-	device->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_planeIndexBuffer );
-
 	context->UpdateSubresource1( m_planeConstantBuffer, 0u, nullptr, &mvpCbufferData, 0u, 0u, 0u );
 	context->VSSetConstantBuffers1( 0u, 1u, &m_planeConstantBuffer, nullptr, nullptr );
-	context->IASetVertexBuffers( 0u, 1u, &m_planeVertexBuffer, &stride, &offset );
-	context->IASetIndexBuffer( m_planeIndexBuffer, DXGI_FORMAT_R32_UINT, 0u );
-	context->PSSetShaderResources( 0u, 1u, &m_planeSrv );
-	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
-	context->DrawIndexed( 6u, 0u, 0 );
 
-	m_planeVertexBuffer->Release();
-	m_planeIndexBuffer->Release();
-	m_planeConstantBuffer->Release();
+	context->DrawIndexed( 6u, 0u, 0 );
 }
 
 void SceneRenderer::UpdateRTTScene( DX::StepTimer const& timer )
 {
-	float radians = ( float )timer.GetTotalSeconds() *
-		DirectX::XMConvertToRadians( m_degreesPerSecond );
+	float radians = ( float )timer.GetTotalSeconds() * DirectX::XMConvertToRadians( m_degreesPerSecond );
 	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
 		XMStoreFloat4x4( &m_rttConstantBufferDatas[ i ].model,
 						 XMMatrixTranspose( DirectX::XMMatrixRotationZ(
@@ -903,6 +879,31 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
+	auto createPlaneMesh = loadVS.then( [ this ]()
+	{
+		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
+		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
+		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 6u, D3D11_BIND_INDEX_BUFFER );
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData;
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		ZEROSTRUCT( vertexBufferData );
+		ZEROSTRUCT( indexBufferData );
+		static const Vertex vertices[ 4u ] =
+		{
+			{ DirectX::XMFLOAT4( -10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( -8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 10.0f, -1.0f, 10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, 8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 10.0f, -1.0f, -10.0f, 1.0f ), DirectX::XMFLOAT4( 8.0f, -8.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+		};
+		static const unsigned int indices[ 6u ] = { 0u, 1u, 2u, 0u, 2u, 3u };
+		vertexBufferData.pSysMem = vertices;
+		indexBufferData.pSysMem = indices;
+
+		m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_planeConstantBuffer );
+		m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_planeVertexBuffer );
+		m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_planeIndexBuffer );
+	} );
 	auto createSkyMesh = loadSkyVS.then( [ this ]()
 	{
 		static const Vertex vertices[ 8u ] =
@@ -1035,6 +1036,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	( createTextures &&
 	  createTalonMesh &&
 	  createCubeMesh &&
+	  createPlaneMesh &&
 	  createSkyMesh &&
 	  createRttTexture &&
 	  createRttTriangles &&
@@ -1079,6 +1081,9 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 	m_rttDsv->Release();
 	m_planeTexture->Release();
 	m_planeSrv->Release();
+	m_planeVertexBuffer->Release();
+	m_planeIndexBuffer->Release();
+	m_planeConstantBuffer->Release();
 	for ( unsigned int i = 0u; i < NUM_RTT_TRIS; ++i )
 	{
 		m_rttConstantBuffers[ i ].Reset();
