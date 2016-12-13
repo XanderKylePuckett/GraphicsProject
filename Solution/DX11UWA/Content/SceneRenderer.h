@@ -54,6 +54,7 @@ namespace DX11UWA
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
+		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayoutInst;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_talonIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_cubeVertexBuffer;
@@ -63,6 +64,7 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyVertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyIndexBuffer;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShaderInst;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_skyVertexShader;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_rttVertexShader;
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_postVertexShader;

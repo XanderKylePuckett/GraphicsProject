@@ -141,5 +141,8 @@
     <FxCompile Include="Content\Shaders\PixelShaderRtt.hlsl">
       <Filter>Content\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Content\Shaders\VertexShaderInst.hlsl">
+      <Filter>Content\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

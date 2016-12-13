@@ -24,7 +24,7 @@ namespace DX11UWA
 		DirectX::XMFLOAT4 normal;
 	};
 
-	struct InstanceBuffer
+	struct InstanceData
 	{
 		DirectX::XMFLOAT4 positionOffset;
 	};

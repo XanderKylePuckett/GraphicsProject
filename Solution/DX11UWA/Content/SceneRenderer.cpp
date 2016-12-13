@@ -6,6 +6,8 @@
 #include <fstream>
 using namespace DX11UWA;
 
+const unsigned int numInstances = 9u;
+
 void SceneRenderer::CreateDrawSurface( ID3D11Texture2D** pTexture )
 {
 	ID3D11Texture2D*& texture = *pTexture;
@@ -526,25 +528,33 @@ bool SceneRenderer::Render( void )
 	m_deviceResources->GetD3DDevice()->CreateDepthStencilState( &dsDesc, &dsState );
 	context->OMSetDepthStencilState( dsState, 1u );
 	dsState->Release();
-	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
+	context->VSSetShader( m_vertexShaderInst.Get(), nullptr, 0u );
 	context->PSSetShader( m_pixelShader.Get(), nullptr, 0u );
 	context->UpdateSubresource1( m_lightingBuffer.Get(), 0u, nullptr, &m_lightingBufferData, 0u, 0u, 0u );
 	context->PSSetConstantBuffers1( 0u, 1u, m_lightingBuffer.GetAddressOf(), nullptr, nullptr );
+	static const UINT strideInst[ 2u ] = { sizeof( Vertex ), sizeof( InstanceData ) };
+	static const UINT offsetInst[ 2u ] = { 0u, 0u };
+	context->IASetInputLayout( m_inputLayoutInst.Get() );
+	ID3D11Buffer* vsbuffers[ 2 ];
+	vsbuffers[ 1 ] = m_instanceBuffer;
 	if ( m_renderCube )
 	{
-		context->IASetVertexBuffers( 0u, 1u, m_cubeVertexBuffer.GetAddressOf(), &stride, &offset );
+		vsbuffers[ 0 ] = m_cubeVertexBuffer.Get();
+		context->IASetVertexBuffers( 0u, 2u, vsbuffers, strideInst, offsetInst );
 		context->IASetIndexBuffer( m_cubeIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 		context->PSSetShaderResources( 0u, 1u, &m_rttSrv );
-		context->DrawIndexed( m_cubeIndexCount, 0u, 0 );
+		context->DrawIndexedInstanced( m_cubeIndexCount, numInstances, 0u, 0, 0u );
 	}
 	else
 	{
-		context->IASetVertexBuffers( 0u, 1u, m_talonVertexBuffer.GetAddressOf(), &stride, &offset );
+		vsbuffers[ 0 ] = m_talonVertexBuffer.Get();
+		context->IASetVertexBuffers( 0u, 2u, vsbuffers, strideInst, offsetInst );
 		context->IASetIndexBuffer( m_talonIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0u );
 		context->PSSetShaderResources( 0u, 1u, &m_talonTexSrv );
-		context->DrawIndexed( m_talonIndexCount, 0u, 0 );
+		context->DrawIndexedInstanced( m_talonIndexCount, numInstances, 0u, 0, 0u );
 	}
-
+	context->VSSetShader( m_vertexShader.Get(), nullptr, 0u );
+	context->IASetInputLayout( m_inputLayout.Get() );
 	if ( m_drawPlane ) DrawPlane();
 	return true;
 }
@@ -726,6 +736,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	auto loadPS = DX::ReadDataAsync( L"PixelShader.cso" );
 	auto loadSkyPS = DX::ReadDataAsync( L"PixelShaderSky.cso" );
 	auto loadVS = DX::ReadDataAsync( L"VertexShader.cso" );
+	auto loadVSI = DX::ReadDataAsync( L"VertexShaderInst.cso" );
 	auto loadSkyVS = DX::ReadDataAsync( L"VertexShaderSky.cso" );
 	auto loadPostVS = DX::ReadDataAsync( L"VertexShaderPost.cso" );
 	auto loadPPPS0 = DX::ReadDataAsync( L"PostPS0.cso" );
@@ -769,13 +780,24 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		{
 			{ "POSITION", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
 			{ "TEXCOORD", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
-			{ "NORMAL", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "NORMAL", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u }
 		};
-
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDesc, ARRAYSIZE( vertexDesc ), &fData[ 0 ], fData.size(), &m_inputLayout ) );
 
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
+	} );
+	auto createVSI = loadVSI.then( [ this ]( const std::vector<byte>& fData )
+	{
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_vertexShaderInst ) );
+		static const D3D11_INPUT_ELEMENT_DESC vertexDescInst[ ] =
+		{
+			{ "POSITION", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "TEXCOORD", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "NORMAL", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 0u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0u },
+			{ "INSTANCE", 0u, DXGI_FORMAT_R32G32B32A32_FLOAT, 1u, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1u }
+		};
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDescInst, ARRAYSIZE( vertexDescInst ), &fData[ 0 ], fData.size(), &m_inputLayoutInst ) );
 	} );
 	auto createSkyVS = loadSkyVS.then( [ this ]( const std::vector<byte>& fData )
 	{
@@ -1043,25 +1065,24 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			delete[ ] indices[ i ];
 		}
 	} );
-	( createRttTexture && createRttMeshes ).then( [ this ]()
+	( createRttTexture && createRttMeshes && createVSI ).then( [ this ]()
 	{
-		static const unsigned int numInstances = 9u;
-		static const InstanceBuffer instances[ numInstances ] =
+		InstanceData instances[ numInstances ] =
 		{
-			{ DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 2.0f, 0.0f, 2.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 2.0f, 0.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 2.0f, 0.0f, -2.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.0f, 0.0f, 2.0f, 1.0f ) },
 			{ DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.0f, -1.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -1.0f, 1.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -1.0f, 0.0f, 0.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ) }
+			{ DirectX::XMFLOAT4( 0.0f, 0.0f, -2.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -2.0f, 0.0f, 2.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -2.0f, 0.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -2.0f, 0.0f, -2.0f, 1.0f ) }
 		};
 		D3D11_SUBRESOURCE_DATA instanceBufferData;
 		ZEROSTRUCT( instanceBufferData );
 		instanceBufferData.pSysMem = instances;
-		CD3D11_BUFFER_DESC instanceBufferDesc( sizeof( InstanceBuffer ) * numInstances, D3D11_BIND_VERTEX_BUFFER );
+		CD3D11_BUFFER_DESC instanceBufferDesc( sizeof( InstanceData ) * numInstances, D3D11_BIND_VERTEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &instanceBufferDesc, &instanceBufferData, &m_instanceBuffer ) );
 	} ).then( [ this ]() { m_loadingComplete = true; } );
 }
@@ -1070,10 +1091,12 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 {
 	m_loadingComplete = false;
 	m_vertexShader.Reset();
+	m_vertexShaderInst.Reset();
 	m_skyVertexShader.Reset();
 	m_rttVertexShader.Reset();
 	m_postVertexShader.Reset();
 	m_inputLayout.Reset();
+	m_inputLayoutInst.Reset();
 	m_pixelShader.Reset();
 	m_skyPixelShader.Reset();
 	m_rttPixelShader.Reset();
