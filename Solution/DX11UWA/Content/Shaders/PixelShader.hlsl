@@ -19,7 +19,7 @@ struct PixelShaderInput
 
 float4 main( PixelShaderInput input ) : SV_TARGET
 {
-	float4 surfaceColor = tex.Sample( samplerstate, input.texcoord.xy );
+	float4 surfaceColor = float4( tex.Sample( samplerstate, input.texcoord.xy ).xyz, 0.9999f );
 	float4 result;
 	if ( lightState.x <= 0.5f && lightState.y <= 0.5f )
 		return surfaceColor;

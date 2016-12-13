@@ -21,7 +21,6 @@ namespace DX11UWA
 		void DrawSurfaceToScreen( ID3D11Texture2D*& surface );
 		void CreateDrawSurface( ID3D11Texture2D** );
 		void DrawRTTScene( void );
-		ID3D11Texture2D*& GetRttTex( void );
 
 		// Helper functions for keyboard and mouse input
 		void SetInputDeviceData( const char* kb, const Windows::UI::Input::PointerPoint^ pos );
