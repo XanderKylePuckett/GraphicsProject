@@ -23,4 +23,9 @@ namespace DX11UWA
 		DirectX::XMFLOAT4 texcoord;
 		DirectX::XMFLOAT4 normal;
 	};
+
+	struct InstanceBuffer
+	{
+		DirectX::XMFLOAT4 positionOffset;
+	};
 }

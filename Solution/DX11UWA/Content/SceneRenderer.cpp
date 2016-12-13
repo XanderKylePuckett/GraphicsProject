@@ -243,11 +243,9 @@ void SceneRenderer::UpdateLights( DX::StepTimer const& timer )
 		DirectX::XMFLOAT4 dir( -1.0f, -1.0f, 1.0f, 1.0f );
 		DirectX::XMVECTOR v = DirectX::XMLoadFloat4( &dir );
 		DirectX::XMMATRIX m = DirectX::XMMatrixRotationY( ( float )( -2.0 * animTime ) );
-		static const float pLightDist = 2.0f;
-		static const float sq3div2 = 0.8660254f;
-		m_lightingBufferData.pLightPos[ 0 ] = DirectX::XMFLOAT4( 0.0f, -0.5f, pLightDist, 1.0f );
-		m_lightingBufferData.pLightPos[ 1 ] = DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
-		m_lightingBufferData.pLightPos[ 2 ] = DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f, -0.5f * pLightDist, 1.0f );
+		m_lightingBufferData.pLightPos[ 0 ] = DirectX::XMFLOAT4( 0.0f, -0.5f, 2.0f, 1.0f );
+		m_lightingBufferData.pLightPos[ 1 ] = DirectX::XMFLOAT4( 1.7320508f, -0.5f, -1.0f, 1.0f );
+		m_lightingBufferData.pLightPos[ 2 ] = DirectX::XMFLOAT4( -1.7320508f, -0.5f, -1.0f, 1.0f );
 		for ( int i = 0; i < 3; ++i )
 			DirectX::XMStoreFloat4( &m_lightingBufferData.pLightPos[ i ], DirectX::XMVector3Transform(
 			DirectX::XMLoadFloat4( &m_lightingBufferData.pLightPos[ i ] ), m ) );
@@ -1023,12 +1021,9 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			vertices[ i ] = new Vertex[ numVertices[ i ] ];
 			indices[ i ] = new unsigned int[ numIndices[ i ] ];
 
-			static const float pLightDist = 1.25f;
-			static const float sq3div2 = 0.8660254f;
-
-			vertices[ i ][ 0u ] = { DirectX::XMFLOAT4( 0.0f, pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
-			vertices[ i ][ 1u ] = { DirectX::XMFLOAT4( pLightDist * sq3div2, -0.5f * pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
-			vertices[ i ][ 2u ] = { DirectX::XMFLOAT4( -pLightDist * sq3div2, -0.5f * pLightDist, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 0.3f ), DirectX::XMFLOAT4() };
+			vertices[ i ][ 0u ] = { DirectX::XMFLOAT4( 0.0f, 1.25f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
+			vertices[ i ][ 1u ] = { DirectX::XMFLOAT4( 1.08253175f, -0.625f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 0.3f ), DirectX::XMFLOAT4() };
+			vertices[ i ][ 2u ] = { DirectX::XMFLOAT4( -1.08253175f, -0.625f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 1.0f, 0.3f ), DirectX::XMFLOAT4() };
 			indices[ i ][ 0u ] = 0u;
 			indices[ i ][ 1u ] = 1u;
 			indices[ i ][ 2u ] = 2u;
@@ -1048,7 +1043,27 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			delete[ ] indices[ i ];
 		}
 	} );
-	( createRttTexture && createRttMeshes ).then( [ this ]() { m_loadingComplete = true; } );
+	( createRttTexture && createRttMeshes ).then( [ this ]()
+	{
+		static const unsigned int numInstances = 9u;
+		static const InstanceBuffer instances[ numInstances ] =
+		{
+			{ DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 1.0f, -1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( 0.0f, -1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -1.0f, 1.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -1.0f, 0.0f, 0.0f, 1.0f ) },
+			{ DirectX::XMFLOAT4( -1.0f, -1.0f, 0.0f, 1.0f ) }
+		};
+		D3D11_SUBRESOURCE_DATA instanceBufferData;
+		ZEROSTRUCT( instanceBufferData );
+		instanceBufferData.pSysMem = instances;
+		CD3D11_BUFFER_DESC instanceBufferDesc( sizeof( InstanceBuffer ) * numInstances, D3D11_BIND_VERTEX_BUFFER );
+		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &instanceBufferDesc, &instanceBufferData, &m_instanceBuffer ) );
+	} ).then( [ this ]() { m_loadingComplete = true; } );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )
@@ -1091,4 +1106,5 @@ void SceneRenderer::ReleaseDeviceDependentResources( void )
 		m_rttVertexBuffers[ i ].Reset();
 		m_rttIndexBuffers[ i ].Reset();
 	}
+	m_instanceBuffer->Release();
 }

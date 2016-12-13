@@ -4,7 +4,7 @@
 #include "ShaderStructures.h"
 #include "..\\Common\\StepTimer.h"
 #include <vector>
-#define NUM_RTT_TRIS 8u
+#define NUM_RTT_TRIS (8u)
 
 namespace DX11UWA
 {
@@ -92,6 +92,7 @@ namespace DX11UWA
 		ID3D11RenderTargetView* m_rttRtv;
 		ID3D11ShaderResourceView* m_rttSrv;
 		ID3D11DepthStencilView* m_rttDsv;
+		ID3D11Buffer* m_instanceBuffer;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
