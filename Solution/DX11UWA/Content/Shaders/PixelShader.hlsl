@@ -48,9 +48,9 @@ float4 main( PixelShaderInput input ) : SV_TARGET
 			}
 
 			return float4( clamp( results[ 0 ].x + results[ 1 ].x + results[ 2 ].x + result.x, 0.0f, 1.0f ),
-							 clamp( results[ 0 ].y + results[ 1 ].y + results[ 2 ].y + result.y, 0.0f, 1.0f ),
-							 clamp( results[ 0 ].z + results[ 1 ].z + results[ 2 ].z + result.z, 0.0f, 1.0f ),
-							 clamp( results[ 0 ].w + results[ 1 ].w + results[ 2 ].w + result.w, 0.0f, 1.0f ) );
+						   clamp( results[ 0 ].y + results[ 1 ].y + results[ 2 ].y + result.y, 0.0f, 1.0f ),
+						   clamp( results[ 0 ].z + results[ 1 ].z + results[ 2 ].z + result.z, 0.0f, 1.0f ),
+						   clamp( results[ 0 ].w + results[ 1 ].w + results[ 2 ].w + result.w, 0.0f, 1.0f ) );
 		}
 		return result;
 	}

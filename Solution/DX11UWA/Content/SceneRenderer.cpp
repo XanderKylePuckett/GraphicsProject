@@ -295,7 +295,7 @@ void SceneRenderer::Update( DX::StepTimer const& timer )
 	if ( KeyHit( '6' ) ) m_currPPPS = 2u;
 	if ( KeyHit( '7' ) ) m_currPPPS = 3u;
 
-// Update or move camera here
+	// Update or move camera here
 	UpdateCamera( timer, 1.5f, 0.75f );
 
 	if ( KeyHit( 'R' ) ) m_renderCube = !m_renderCube;
@@ -645,7 +645,7 @@ void SceneRenderer::ObjMesh_LoadMesh(
 			{ DirectX::XMFLOAT4( 0.5f, -0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f ) },
 			{ DirectX::XMFLOAT4( 0.5f, -0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, -1.0f, 1.0f, 1.0f ) },
 			{ DirectX::XMFLOAT4( 0.5f, 0.5f, -0.5f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, -1.0f, 1.0f ) },
-			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ) , DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) }
+			{ DirectX::XMFLOAT4( 0.5f, 0.5f, 0.5f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 0.0f, 0.0f, 1.0f ), DirectX::XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f ) }
 		};
 		static const unsigned int cubeIndices[ ] =
 		{
@@ -685,34 +685,34 @@ void SceneRenderer::ObjMesh_Unload( Vertex*& vertices, unsigned int*& indices )
 
 void SceneRenderer::CreateDeviceDependentResources( void )
 {
-	auto loadPS = DX::ReadDataAsync( L"PixelShader.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPS = DX::ReadDataAsync( L"PixelShader.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_pixelShader ) );
 
 		CD3D11_BUFFER_DESC lightingBufferDesc( sizeof( LightingBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &lightingBufferDesc, nullptr, &m_lightingBuffer ) );
 	} );
-	auto loadSkyPS = DX::ReadDataAsync( L"PixelShaderSky.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadSkyPS = DX::ReadDataAsync( L"PixelShaderSky.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_skyPixelShader ) );
 	} );
-	auto loadPPPS0 = DX::ReadDataAsync( L"PostPS0.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPPPS0 = DX::ReadDataAsync( L"PostPS0.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 0 ] ) );
 	} );
-	auto loadPPPS1 = DX::ReadDataAsync( L"PostPS1.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPPPS1 = DX::ReadDataAsync( L"PostPS1.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 1 ] ) );
 	} );
-	auto loadPPPS2 = DX::ReadDataAsync( L"PostPS2.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPPPS2 = DX::ReadDataAsync( L"PostPS2.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 2 ] ) );
 	} );
-	auto loadPPPS3 = DX::ReadDataAsync( L"PostPS3.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPPPS3 = DX::ReadDataAsync( L"PostPS3.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_postPS[ 3 ] ) );
 	} );
-	auto loadVS = DX::ReadDataAsync( L"VertexShader.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadVS = DX::ReadDataAsync( L"VertexShader.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_vertexShader ) );
 
@@ -727,7 +727,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &constantBufferDesc, nullptr, &m_constantBuffer ) );
 	} );
-	auto loadVSI = DX::ReadDataAsync( L"VertexShaderInst.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadVSI = DX::ReadDataAsync( L"VertexShaderInst.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_vertexShaderInst ) );
 		static const D3D11_INPUT_ELEMENT_DESC vertexDescInst[ ] =
@@ -739,19 +739,19 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		};
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateInputLayout( vertexDescInst, ARRAYSIZE( vertexDescInst ), &fData[ 0 ], fData.size(), &m_inputLayoutInst ) );
 	} );
-	auto loadSkyVS = DX::ReadDataAsync( L"VertexShaderSky.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadSkyVS = DX::ReadDataAsync( L"VertexShaderSky.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_skyVertexShader ) );
 	} );
-	auto loadPostVS = DX::ReadDataAsync( L"VertexShaderPost.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadPostVS = DX::ReadDataAsync( L"VertexShaderPost.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_postVertexShader ) );
 	} );
-	auto loadRttPS = DX::ReadDataAsync( L"PixelShaderRtt.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadRttPS = DX::ReadDataAsync( L"PixelShaderRtt.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreatePixelShader( &fData[ 0 ], fData.size(), nullptr, &m_rttPixelShader ) );
 	} );
-	auto loadRttVS = DX::ReadDataAsync( L"VertexShaderRtt.cso" ).then( [ this ]( const std::vector<byte>& fData )
+	auto loadRttVS = DX::ReadDataAsync( L"VertexShaderRtt.cso" ).then( [ this ] ( const std::vector<byte>& fData )
 	{
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateVertexShader( &fData[ 0 ], fData.size(), nullptr, &m_rttVertexShader ) );
 
@@ -760,7 +760,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			m_deviceResources->GetD3DDevice()->CreateBuffer( &rttConstantBufferDesc, nullptr, &m_rttConstantBuffers[ i ] );
 	} );
 
-	auto createTextures = ( loadSkyPS && loadPS ).then( [ this ]()
+	auto createTextures = ( loadSkyPS && loadPS ).then( [ this ] ()
 	{
 		ID3D11Device* const dev = m_deviceResources->GetD3DDevice();
 
@@ -831,7 +831,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDeviceContext()->PSSetSamplers( 0u, 1u, &samplerState );
 		samplerState->Release();
 	} );
-	auto createTalonMesh = loadVS.then( [ this ]()
+	auto createTalonMesh = loadVS.then( [ this ] ()
 	{
 		Vertex* vertices = nullptr;
 		unsigned int* indices = nullptr;
@@ -855,7 +855,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	auto createCubeMesh = loadVS.then( [ this ]()
+	auto createCubeMesh = loadVS.then( [ this ] ()
 	{
 		Vertex* vertices = nullptr;
 		unsigned int* indices = nullptr;
@@ -879,7 +879,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 
 		ObjMesh_Unload( vertices, indices );
 	} );
-	auto createPlaneMesh = loadVS.then( [ this ]()
+	auto createPlaneMesh = loadVS.then( [ this ] ()
 	{
 		CD3D11_BUFFER_DESC constantBufferDesc( sizeof( ModelViewProjectionConstantBuffer ), D3D11_BIND_CONSTANT_BUFFER );
 		CD3D11_BUFFER_DESC vertexBufferDesc( sizeof( Vertex ) * 4u, D3D11_BIND_VERTEX_BUFFER );
@@ -904,7 +904,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDevice()->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &m_planeVertexBuffer );
 		m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_planeIndexBuffer );
 	} );
-	auto createSkyMesh = loadSkyVS.then( [ this ]()
+	auto createSkyMesh = loadSkyVS.then( [ this ] ()
 	{
 		static const Vertex vertices[ 8u ] =
 		{
@@ -915,7 +915,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			{ DirectX::XMFLOAT4( -2.0f, 2.0f, -2.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
 			{ DirectX::XMFLOAT4( 2.0f, 2.0f, -2.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
 			{ DirectX::XMFLOAT4( 2.0f, -2.0f, -2.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) },
-			{ DirectX::XMFLOAT4( -2.0f, -2.0f, -2.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) , DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) }
+			{ DirectX::XMFLOAT4( -2.0f, -2.0f, -2.0f, 1.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ), DirectX::XMFLOAT4( 0.0f, 0.0f, 0.0f, 0.0f ) }
 		};
 		static const unsigned int indices[ 36u ] =
 		{
@@ -939,7 +939,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		CD3D11_BUFFER_DESC indexBufferDesc( sizeof( unsigned int ) * 36u, D3D11_BIND_INDEX_BUFFER );
 		DX::ThrowIfFailed( m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_skyIndexBuffer ) );
 	} );
-	auto createRttTexture = ( loadPPPS0 && loadPPPS1 && loadPPPS2 && loadPPPS3 && loadPostVS ).then( [ this ]()
+	auto createRttTexture = ( loadPPPS0 && loadPPPS1 && loadPPPS2 && loadPPPS3 && loadPostVS ).then( [ this ] ()
 	{
 		D3D11_TEXTURE2D_DESC rttTexDesc;
 		D3D11_TEXTURE2D_DESC dsTexDesc;
@@ -997,7 +997,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 		m_deviceResources->GetD3DDevice()->CreateDepthStencilView( m_rttDsTex, &dsvDesc, &m_rttDsv );
 
 	} );
-	auto createRttTriangles = ( loadRttPS && loadRttVS ).then( [ this ]()
+	auto createRttTriangles = ( loadRttPS && loadRttVS ).then( [ this ] ()
 	{
 		static const Vertex triangleVertices[ ] =
 		{
@@ -1021,7 +1021,7 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 			m_deviceResources->GetD3DDevice()->CreateBuffer( &indexBufferDesc, &indexBufferData, &m_rttIndexBuffers[ i ] );
 		}
 	} );
-	auto createInstanceBuffer = loadVSI.then( [ this ]()
+	auto createInstanceBuffer = loadVSI.then( [ this ] ()
 	{
 		static InstanceData instances[ numInstances ];
 		for ( unsigned int i = 0u; i < numInstances; ++i )
@@ -1040,7 +1040,10 @@ void SceneRenderer::CreateDeviceDependentResources( void )
 	  createSkyMesh &&
 	  createRttTexture &&
 	  createRttTriangles &&
-	  createInstanceBuffer ).then( [ this ]() { m_loadingComplete = true; } );
+	  createInstanceBuffer ).then( [ this ] ()
+	{
+		m_loadingComplete = true;
+	} );
 }
 
 void SceneRenderer::ReleaseDeviceDependentResources( void )

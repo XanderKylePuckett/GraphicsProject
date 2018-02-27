@@ -39,7 +39,7 @@ namespace ScreenRotation
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
-// 90-degree Z-rotation
+	// 90-degree Z-rotation
 	static const XMFLOAT4X4 Rotation90(
 		0.0f, 1.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 0.0f, 0.0f,
@@ -47,7 +47,7 @@ namespace ScreenRotation
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
-// 180-degree Z-rotation
+	// 180-degree Z-rotation
 	static const XMFLOAT4X4 Rotation180(
 		-1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, -1.0f, 0.0f, 0.0f,
@@ -55,7 +55,7 @@ namespace ScreenRotation
 		0.0f, 0.0f, 0.0f, 1.0f
 	);
 
-// 270-degree Z-rotation
+	// 270-degree Z-rotation
 	static const XMFLOAT4X4 Rotation270(
 		0.0f, -1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f, 0.0f, 0.0f,
@@ -103,7 +103,7 @@ void DX::DeviceResources::CreateDeviceIndependentResources()
 	)
 	);
 
-// Initialize the DirectWrite Factory.
+	// Initialize the DirectWrite Factory.
 	DX::ThrowIfFailed(
 		DWriteCreateFactory(
 		DWRITE_FACTORY_TYPE_SHARED,
@@ -112,7 +112,7 @@ void DX::DeviceResources::CreateDeviceIndependentResources()
 	)
 	);
 
-// Initialize the Windows Imaging Component (WIC) Factory.
+	// Initialize the Windows Imaging Component (WIC) Factory.
 	DX::ThrowIfFailed(
 		CoCreateInstance(
 		CLSID_WICImagingFactory2,
@@ -202,7 +202,7 @@ void DX::DeviceResources::CreateDeviceResources()
 		context.As( &m_d3dContext )
 	);
 
-// Create the Direct2D device object and a corresponding context.
+	// Create the Direct2D device object and a corresponding context.
 	ComPtr<IDXGIDevice3> dxgiDevice;
 	DX::ThrowIfFailed(
 		m_d3dDevice.As( &dxgiDevice )
@@ -317,8 +317,8 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 			swapChain.As( &m_swapChain )
 		);
 
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
+		// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+		// ensures that the application will only render after each VSync, minimizing power consumption.
 		DX::ThrowIfFailed(
 			dxgiDevice->SetMaximumFrameLatency( 1 )
 		);
@@ -366,7 +366,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 		m_swapChain->SetRotation( displayRotation )
 	);
 
-// Create a render target view of the swap chain back buffer.
+	// Create a render target view of the swap chain back buffer.
 	ComPtr<ID3D11Texture2D1> backBuffer;
 	DX::ThrowIfFailed(
 		m_swapChain->GetBuffer( 0, IID_PPV_ARGS( &backBuffer ) )
@@ -380,7 +380,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 	)
 	);
 
-// Create a depth stencil view for use with 3D rendering if needed.
+	// Create a depth stencil view for use with 3D rendering if needed.
 	CD3D11_TEXTURE2D_DESC1 depthStencilDesc(
 		DXGI_FORMAT_D24_UNORM_S8_UINT,
 		lround( m_d3dRenderTargetSize.Width ),
@@ -408,7 +408,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 	)
 	);
 
-// Set the 3D rendering viewport to target the entire window.
+	// Set the 3D rendering viewport to target the entire window.
 	m_screenViewport = CD3D11_VIEWPORT(
 		0.0f,
 		0.0f,

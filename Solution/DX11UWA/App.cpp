@@ -155,7 +155,7 @@ void App::OnSuspending( Platform::Object^ sender, SuspendingEventArgs^ args )
 	// the app will be forced to exit.
 	SuspendingDeferral^ deferral = args->SuspendingOperation->GetDeferral();
 
-	create_task( [ this, deferral ]()
+	create_task( [ this, deferral ] ()
 	{
 		m_deviceResources->Trim();
 

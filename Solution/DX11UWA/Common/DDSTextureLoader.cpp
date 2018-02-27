@@ -129,11 +129,20 @@ typedef struct
 #pragma pack(pop)
 
 //---------------------------------------------------------------------------------
-struct handle_closer { void operator()( HANDLE h ) { if ( h ) CloseHandle( h ); } };
+struct handle_closer
+{
+	void operator()( HANDLE h )
+	{
+		if ( h ) CloseHandle( h );
+	}
+};
 
 typedef public std::unique_ptr<void, handle_closer> ScopedHandle;
 
-inline HANDLE safe_handle( HANDLE h ) { return ( h == INVALID_HANDLE_VALUE ) ? 0 : h; }
+inline HANDLE safe_handle( HANDLE h )
+{
+	return ( h == INVALID_HANDLE_VALUE ) ? 0 : h;
+}
 
 //--------------------------------------------------------------------------------------
 static HRESULT LoadTextureDataFromFile( _In_z_ const wchar_t* fileName,

@@ -44,7 +44,7 @@ void DX11UWAMain::CreateWindowSizeDependentResources( void )
 void DX11UWAMain::Update( void )
 {
 	// Update scene objects.
-	m_timer.Tick( [ & ]()
+	m_timer.Tick( [ & ] ()
 	{
 		// TODO: Replace this with your app's content update functions.
 		m_sceneRenderer->Update( m_timer );

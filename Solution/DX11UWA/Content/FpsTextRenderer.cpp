@@ -98,8 +98,8 @@ void FpsTextRenderer::Render()
 		m_whiteBrush.Get()
 	);
 
-// Ignore D2DERR_RECREATE_TARGET here. This error indicates that the device
-// is lost. It will be handled during the next call to Present.
+	// Ignore D2DERR_RECREATE_TARGET here. This error indicates that the device
+	// is lost. It will be handled during the next call to Present.
 	HRESULT hr = context->EndDraw();
 	if ( hr != D2DERR_RECREATE_TARGET )
 	{
